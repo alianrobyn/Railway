@@ -1,0 +1,68 @@
+﻿@page "/registration"
+@inject NavigationManager NavManager
+
+<PageTitle>Registration</PageTitle>
+
+<MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Сторінка реєстрації</MudText>
+
+<br />
+<br />
+<MudStack AlignItems="AlignItems.Center">
+    <MudItem xs="4">
+        <MudTextField Mask="@emailMask" @bind-Value="@element.Email" Label="E-mail" HelperText="user@domain.com" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudTextField @bind-Value="@element.Password" Label="Пароль" Variant="Variant.Outlined" InputType="@PasswordInput" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="ButtonTestclick" AdornmentAriaLabel="Show Password" />
+        <MudTextField @bind-Value="@element.Password1" Label="Підтвердіть пароль" Variant="Variant.Outlined" InputType="@PasswordInput" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="ButtonTestclick" AdornmentAriaLabel="Show Password" />
+        <MudTextField @bind-Value="@element.Surname" Label="Прізвище" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudTextField @bind-Value="@element.Name" Label="Ім'я" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudTextField @bind-Value="@element.Phone" Label="Телефон" Variant="Variant.Outlined" Margin="Margin.Dense" />
+    </MudItem>
+
+    <div class="d-flex">
+    <MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="u" Color="Color.Tertiary">Зареєструватися</MudButton>
+    </div>
+    <MudLink Href="login" Color="Color.Tertiary" Underline="Underline.Always">Увійти</MudLink>
+</MudStack>
+
+
+@code {
+    R element = new R { Email = "", Password = "", Password1 = "", Surname = "", Name = "", Phone = "" };
+
+    public class R
+    {
+        public string? Email { get; set; }
+        public string? Password { get; set; }
+        public string? Password1 { get; set; }
+        public string? Surname { get; set; }
+        public string? Name { get; set; }
+        public string? Phone { get; set; }
+    }
+
+    public IMask emailMask = RegexMask.Email();
+
+    bool isShow;
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    void ButtonTestclick()
+    {
+        @if (isShow)
+        {
+            isShow = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            isShow = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+
+    AlignItems _align = AlignItems.Center;
+
+    private async void u()
+    {
+        NavManager.NavigateTo("/personal_cabinet");
+    }
+}

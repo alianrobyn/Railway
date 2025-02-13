@@ -1,0 +1,61 @@
+﻿@page "/login_adm"
+@inject NavigationManager NavManager
+
+
+<PageTitle>Admin login</PageTitle>
+
+<MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Сторінка авторизації адміністратора</MudText>
+
+<br />
+<br />
+<MudStack AlignItems="AlignItems.Center">
+    <MudItem xs="4">
+        <MudTextField Mask="@emailMask" @bind-Value="@element.Email" Label="E-mail" HelperText="user@domain.com" Variant="Variant.Outlined" Margin="Margin.Dense" />
+        <MudTextField @bind-Value="@element.Password" Label="Пароль" Variant="Variant.Outlined" InputType="@PasswordInput" Adornment="Adornment.End" AdornmentIcon="@PasswordInputIcon" OnAdornmentClick="ButtonTestclick" AdornmentAriaLabel="Show Password" />
+    </MudItem>
+
+    <div class="d-flex">
+        <MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="u" Color="Color.Tertiary" Style="width: 150px;">Увійти</MudButton>
+    </div>
+
+</MudStack>
+
+
+@code {
+    L element = new L { Email = "", Password = "" };
+
+    public class L
+    {
+        public string? Email { get; set; }
+        public string? Password { get; set; }
+    }
+
+    public IMask emailMask = RegexMask.Email();
+
+    bool isShow;
+    InputType PasswordInput = InputType.Password;
+    string PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+
+    void ButtonTestclick()
+    {
+        @if (isShow)
+        {
+            isShow = false;
+            PasswordInputIcon = Icons.Material.Filled.VisibilityOff;
+            PasswordInput = InputType.Password;
+        }
+        else
+        {
+            isShow = true;
+            PasswordInputIcon = Icons.Material.Filled.Visibility;
+            PasswordInput = InputType.Text;
+        }
+    }
+
+    AlignItems _align = AlignItems.Center;
+
+    void u()
+    {
+        NavManager.NavigateTo("/personal_cabinet_adm");
+    }
+}

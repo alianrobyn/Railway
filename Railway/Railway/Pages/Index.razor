@@ -1,0 +1,74 @@
+﻿@page "/"
+@inject NavigationManager NavManager
+
+<PageTitle>Index</PageTitle>
+
+<MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Головна</MudText>
+<br />
+<br />
+
+<MudStack Row="true">
+	<MudTextField T="string" @bind-Value="@element.From" Label="Звідки" Variant="Variant.Outlined" Margin="Margin.Dense" />
+    <MudIconButton Icon="@Icons.Material.Filled.SyncAlt" Color="Color.Inherit" Edge="Edge.Start" OnClick="SwapValues" />
+	<MudTextField @bind-Value="@element.Where" Label="Куди" Variant="Variant.Outlined" Margin="Margin.Dense" />
+</MudStack>
+<br />
+@*<MudItem xs="3">
+	<MudTextField @bind-Value="@element.Data" Format="yyyy-MM-dd" Label="Дата відправлення" Variant="Variant.Outlined" Margin="Margin.Dense" InputType="InputType.Date" />
+</MudItem>*@
+<br />
+
+<div class="d-flex align-end justify-space-between mud-width-full">
+	<div class="d-flex flex-column">
+        <MudText><b>Звідки:</b> @element.From</MudText>
+        <MudText><b>Куди:</b> @element.Where</MudText>
+@*		<MudText><b>Дата відправлення:</b> @element.Data.ToShortDateString()</MudText>
+*@	</div>
+</div>
+
+	<MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="@l" Color="Color.Tertiary">Логін</MudButton>
+	<MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="@i" Color="Color.Tertiary">Квитки</MudButton>
+	<MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="@a" Color="Color.Tertiary">Адмін</MudButton>
+
+
+<MudStack AlignItems="AlignItems.Center">
+    <MudStack Row="true">
+        <MudLink Href="" Color="Color.Tertiary" Underline="Underline.Always">UA</MudLink>
+        <MudLink Color="Color.Tertiary" Underline="Underline.Always">|</MudLink>
+        <MudLink Href="ru" Color="Color.Tertiary" Underline="Underline.Always">RU</MudLink>
+    </MudStack>
+</MudStack>
+
+
+@code {
+    private void SwapValues()
+    {
+        string? temp = element.From;
+        element.From = element.Where;
+        element.Where = temp;
+    }
+    
+    Search element = new Search { From = "", Where = "", /*Data = DateTime.Today */};
+
+    public class Search
+    {
+        public string? From { get; set; }
+        public string? Where { get; set; }
+        //public DateTime Data { get; set; }
+    }
+
+    void l()
+    {
+        NavManager.NavigateTo("/login");
+    }
+
+    void i()
+    {
+        NavManager.NavigateTo("issuing_tickets");
+    }
+    
+    void a()
+    {
+        NavManager.NavigateTo("login_adm");
+    }
+}

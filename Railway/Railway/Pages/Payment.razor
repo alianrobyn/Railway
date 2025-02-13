@@ -1,0 +1,42 @@
+﻿@page "/payment"
+@inject NavigationManager NavManager
+
+<PageTitle>Payment</PageTitle>
+
+<MudBreadcrumbs Items="_items">
+    <ItemTemplate Context="item">
+        <MudLink Color="Color.Tertiary" Href="@item.Href">@item.Text.ToUpper()</MudLink>
+    </ItemTemplate>
+</MudBreadcrumbs>
+
+<MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Оплата квитків</MudText>
+
+
+<MudStack AlignItems="AlignItems.Center">
+    <MudItem xs="7">
+        <MudPaper Class="mx-auto pa-6">
+            <MudStack Spacing="4">
+                <MudTextField T="string" Label="Нормер карти" Mask="@(new PatternMask("0000 0000 0000 0000"))" />
+                <MudStack Row="true">
+                    <MudTextField T="string" Label="ММ / YY" Mask="@(new DateMask("MM/YY", 'Y', 'M'))" />
+                    <MudTextField T="string" Label="CVV" Mask="@(new PatternMask("000"))" />
+                </MudStack>
+                <MudButton Variant="Variant.Filled" Color="Color.Tertiary" OnClick="u" DisableElevation="true">Сплатити</MudButton>
+            </MudStack>
+        </MudPaper>
+    </MudItem>
+</MudStack>
+
+@code {
+
+    private List<BreadcrumbItem> _items = new List<BreadcrumbItem>
+    {
+        new BreadcrumbItem("← До корзини", href: "basket"),
+    };
+
+    void u()
+    {
+        NavManager.NavigateTo("/success");
+    }
+   
+}

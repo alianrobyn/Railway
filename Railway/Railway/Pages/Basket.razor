@@ -1,0 +1,26 @@
+﻿@page "/basket"
+@inject NavigationManager NavManager
+
+<PageTitle>Basket</PageTitle>
+
+<MudBreadcrumbs Items="_items">
+    <ItemTemplate Context="item">
+        <MudLink Color="Color.Tertiary" Href="@item.Href">@item.Text.ToUpper()</MudLink>
+    </ItemTemplate>
+</MudBreadcrumbs>
+
+<PageTitle>Basket</PageTitle>
+
+<MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Кошик</MudText>
+
+<MudLink Href="payment" Color="Color.Tertiary" Underline="Underline.Always">Замовити</MudLink>
+
+@code {
+   
+    private List<BreadcrumbItem> _items = new List<BreadcrumbItem>
+    {
+        new BreadcrumbItem("← До оформлення квитків", href: "issuing_tickets"),
+    };
+
+
+}

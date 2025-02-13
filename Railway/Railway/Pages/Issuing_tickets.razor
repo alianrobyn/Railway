@@ -1,0 +1,79 @@
+﻿@page "/issuing_tickets"
+@inject NavigationManager NavManager
+
+<PageTitle>Issuing_tickets</PageTitle>
+
+<MudBreadcrumbs Items="_items">
+    <ItemTemplate Context="item">
+        <MudLink Color="Color.Tertiary" Href="@item.Href">@item.Text.ToUpper()</MudLink>
+    </ItemTemplate>
+</MudBreadcrumbs>
+
+<MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Оформлення квитків</MudText>
+
+
+
+
+
+<br />
+<br />
+
+<MudText Color="Color.Dark" Typo="Typo.h5">Введіть дані пасажирів</MudText>
+
+<MudStack Row="true">
+    <MudTextField @bind-Value="@element.Surname" Label="Прізвище" Variant="Variant.Outlined" Margin="Margin.Dense" />
+    <MudTextField @bind-Value="@element.Name" Label="Ім'я" Variant="Variant.Outlined" Margin="Margin.Dense" />
+</MudStack>
+
+<br />
+
+<MudStack Row="true">
+    <MudText Color="Color.Dark">Тип документу:</MudText>
+    <MudSpacer />
+</MudStack>
+<MudStack Row="true">
+    <MudRadioGroup @bind-SelectedOption="@SelectedOption">
+        <MudRadio Option="@("Radio 1")" Color="Color.Tertiary">Повний</MudRadio><br />
+        <MudRadio Option="@("Radio 4")" Color="Color.Tertiary">Пільговий</MudRadio><br />
+    </MudRadioGroup>
+
+</MudStack>
+
+<br />
+
+<MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="b" Color="Color.Tertiary">В кошик</MudButton>
+
+@* <MudMessageBox @ref="mbox" Title="Попередження" CancelText="Скасувати">
+    <MessageContent>
+        В потязі перевірятиметься посвідчення, що доказує, що ви є студентом/пільговиком/дитиною. Якщо його не буде або воно виявиться неправдивим, з вас буде знято штраф.
+    </MessageContent>
+    <YesButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" OnClick="b2">Гаразд</MudButton>
+    </YesButton>
+</MudMessageBox> *@
+
+@code {
+ 
+    private List<BreadcrumbItem> _items = new List<BreadcrumbItem>
+    {
+        new BreadcrumbItem("← На головну", href: "#"),
+    };
+
+    MudMessageBox mbox { get; set; } = default!;
+
+    IT element = new IT { Surname = "", Name = "" };
+
+    public class IT
+    {
+        public string? Surname { get; set; }
+        public string? Name { get; set; }
+    }
+
+    public string SelectedOption { get; set; } = default!;
+
+    void b()
+    {
+        NavManager.NavigateTo("basket");
+    }
+
+}
