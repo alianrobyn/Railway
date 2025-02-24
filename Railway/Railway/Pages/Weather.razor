@@ -34,8 +34,8 @@
                         <MudCardContent>
                             <MudText Typo="Typo.subtitle2">
                                 @DateTime.Parse(forecast.dt_txt).ToString("HH:mm")
-                            </MudText>                            
-                            <img src="https://openweathermap.org/img/wn/@(forecast.weather[0].icon).png" alt="icon" />
+                            </MudText>
+                                <img src="https://openweathermap.org/img/wn/@(forecast.weather[0].icon).png" alt="icon" />
                             <MudText>@Math.Round(forecast.main.temp) °C</MudText>
                         </MudCardContent>
                     </MudCard>
@@ -50,7 +50,7 @@
 <br />
 
 <MudStack AlignItems="AlignItems.Center">
-    <MudLink Href="https://openweathermap.org/" Color="Color.Tertiary" Underline="Underline.Always">Створено за допомогою OpenWeather</MudLink>
+    <MudLink Href="https://openweathermap.org/" Color="Color.Tertiary" Target="_blank" Underline="Underline.Always">Створено за допомогою OpenWeather</MudLink>
 </MudStack>
 
 
