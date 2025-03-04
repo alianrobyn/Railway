@@ -1,15 +1,15 @@
 ﻿@inherits LayoutComponentBase
 @inject NavigationManager NavManager
 
-<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="_theme" />
+<MudThemeProvider @bind-IsDarkMode="@_isDarkMode" Theme="MyCustomTheme" />
 <MudDialogProvider />
 <MudSnackbarProvider />
 
 <MudLayout>
     <MudAppBar Color="Color.Tertiary" Elevation="0">
         <MudToggleIconButton @bind-Toggled="@_isDarkMode"
-                             Icon="@Icons.Material.Filled.DarkMode" Color="Color.Inherit"
-                             ToggledIcon="@Icons.Material.Filled.LightMode" ToggledColor="Color.Inherit" />
+        Icon="@Icons.Material.Filled.DarkMode" Color="Color.Inherit"
+        ToggledIcon="@Icons.Material.Filled.LightMode" ToggledColor="Color.Inherit" />
         <MudIconButton Icon="@Icons.Material.Filled.Construction" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => pca())" />
         <MudSpacer />
         <MudIconButton Icon="@Icons.Material.Filled.DirectionsRailway" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => Home())" />
@@ -27,6 +27,8 @@
 
 
 @code {
+
+
 
     void Home()
     {
@@ -58,7 +60,15 @@
         NavManager.NavigateTo("/login_adm");
     }
 
-    private MudTheme _theme = new();
+    // private MudTheme _theme = new();
+    MudTheme MyCustomTheme = new MudTheme()
+        {
+            Palette = new Palette()
+            {
+                Primary = Colors.Teal.Default,
+            }
+        };
+
     private bool _isDarkMode;
     public bool AlarmOn { get; set; }
 }
