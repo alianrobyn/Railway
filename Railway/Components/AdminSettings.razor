@@ -1,0 +1,294 @@
+﻿@using Microsoft.EntityFrameworkCore;
+@using Railway.Data;
+@using Railway.Data.Models;
+@inject NavigationManager NavManager
+@inject AppDbContext DbContext
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Системні налаштування</PageTitle>
+
+<MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Особистий кабінет адміністратора</MudText>
+<br/>
+<br/>
+<MudStack AlignItems="AlignItems.Center">
+    <MudTabs Rounded="true" Outlined="true" Color="Color.Tertiary" Centered>
+        <MudTabPanel Text="Користувачі">
+
+            <br/>
+
+            <MudStack Row="true">
+                <MudTextField @bind-Value="searchString0" Placeholder="Пошук" Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                              Class="mt-0"></MudTextField>
+                <MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="@l" Color="Color.Tertiary">Новий
+                    користувач
+                </MudButton>
+            </MudStack>
+
+            <MudTable FixedHeader="@fixed_header0" Filter="new Func<User,bool>(FilterUsers)" Items="UserList"
+                      Hover="true" Elevation="0" @bind-SelectedItem="_selectedUser" CanCancelEdit="true"
+                      OnCommitEditClick="SaveUserData">
+                <HeaderContent>
+                    <MudTh>№ користувача</MudTh>
+                    <MudTh>Прізвище</MudTh>
+                    <MudTh>Ім'я</MudTh>
+                    <MudTh>Телефон</MudTh>
+                    <MudTh>Email</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="№ користувача">@context.Id</MudTd>
+                    <MudTd DataLabel="Прізвище">@context.LastName</MudTd>
+                    <MudTd DataLabel="Ім'я">@context.FirstName</MudTd>
+                    <MudTd DataLabel="Телефон">@context.PhoneNumber</MudTd>
+                    <MudTd DataLabel="Email">@context.Email</MudTd>
+                    <MudTd DataLabel="Дії">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Inherit"
+                                       OnClick="() => DeleteUser(context)"></MudIconButton>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>На Ваш запит не було знайдено жодного користувача.</MudText>
+                    <MudText>Переконайтеся, що всі слова написані правильно.</MudText>
+                </NoRecordsContent>
+                <LoadingContent>
+                    <MudText>Завантаження...</MudText>
+                </LoadingContent>
+                <RowEditingTemplate>
+                    <MudTd DataLabel="№ користувача">@context.Id</MudTd>
+                    <MudTd DataLabel="Прізвище">
+                        <MudTextField @bind-Value="@context.LastName" Required/>
+                    </MudTd>
+                    <MudTd DataLabel="Ім'я">
+                        <MudTextField @bind-Value="@context.FirstName" Required/>
+                    </MudTd>
+                    <MudTd DataLabel="Телефон">
+                        <MudTextField @bind-Value="@context.PhoneNumber" Required/>
+                    </MudTd>
+                    <MudTd DataLabel="Email">
+                        <MudTextField @bind-Value="@context.Email" Required/>
+                    </MudTd>
+                </RowEditingTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new[]{10, 20}"/>
+                </PagerContent>
+            </MudTable>
+
+            <br/>
+
+        </MudTabPanel>
+        <MudTabPanel Text="Рейси">
+
+            <br/>
+
+            <MudStack Row="true">
+                <MudTextField @bind-Value="_searchString" Placeholder="Пошук" Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                              Class="mt-0"></MudTextField>
+                <MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="@l" Color="Color.Tertiary">Новий
+                    рейс
+                </MudButton>
+            </MudStack>
+
+            <MudTable FixedHeader="@_fixedHeader" Filter="new Func<Route,bool>(FilterFunc)" Items="RouteList"
+                      Hover="true" Elevation="0" @bind-SelectedItem="_selectedRoute" CanCancelEdit="true"
+                      OnCommitEditClick="SaveRouteData" OnCancelEditClick="RestoreRouteData">
+                <HeaderContent>
+                    <MudTh>№ потяга</MudTh>
+                    <MudTh>Відправлення</MudTh>
+                    <MudTh></MudTh>
+                    <MudTh>Прибуття</MudTh>
+                    <MudTh></MudTh>
+                    <MudTh>Тип потяга</MudTh>
+                    <MudTh>Вільних місць</MudTh>
+                    <MudTh>Дата фіксації</MudTh>
+                    <MudTh>Ціна</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="№ потяга">@context.RouteId</MudTd>
+                    <MudTd DataLabel="Відправлення">@context.StartStation.Name</MudTd>
+                    <MudTd DataLabel="Час"> @Convert.ToDateTime(@context.DepartureDateTime)</MudTd>
+                    <MudTd DataLabel="Прибуття">@context.EndStation.Name</MudTd>
+                    <MudTd DataLabel="Час"> @Convert.ToDateTime(@context.ArrivalDateTime)</MudTd>
+                    <MudTd DataLabel="Тип потяга">@context.TrainType.Name</MudTd>
+                    <MudTd DataLabel="Вільних місць">@context.AvailableSeats</MudTd>
+                    <MudTd DataLabel="Дата фіксації">@context.FixationDateTime</MudTd>
+                    <MudTd DataLabel="Ціна">@context.Price</MudTd>
+                    <MudTd DataLabel="Дії">
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Inherit"
+                                       OnClick="() => DeleteRoute(context)"></MudIconButton>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText>На Ваш запит не було знайдено жодного маршруту.</MudText>
+                    <MudText>Переконайтеся, що всі слова написані правильно.</MudText>
+                    <MudText>Якщо помилок не було виявлено - по заданому Вами напрямку місць немає, але ви можете
+                        переглянути маршрути з пересадкою.
+                    </MudText>
+                </NoRecordsContent>
+                <LoadingContent>
+                    <MudText>Завантаження...</MudText>
+                </LoadingContent>
+                <RowEditingTemplate>
+                    <MudTd DataLabel="№ потяга">@context.RouteId</MudTd>
+                    <MudTd DataLabel="Відправлення">
+                        <MudTextField @bind-Value="@context.StartStation.Name" Required/>
+                    </MudTd>
+                    <MudTd DataLabel=" ">
+                        <MudTextField @bind-Value="@context.DepartureDateTime" Format="s"
+                                      InputType="InputType.DateTimeLocal" Required/>
+                    </MudTd>
+                    <MudTd DataLabel="Прибуття">
+                        <MudTextField @bind-Value="@context.EndStation.Name" Required/>
+                    </MudTd>
+                    <MudTd DataLabel=" ">
+                        <MudTextField @bind-Value="@context.ArrivalDateTime" Format="s"
+                                      InputType="InputType.DateTimeLocal" Required/>
+                    </MudTd>
+                    <MudTd DataLabel="Тип потяга">
+                        <MudTextField @bind-Value="@context.TrainType.Name" Required/>
+                    </MudTd>
+                    <MudTd DataLabel="Вільних місць">@context.AvailableSeats</MudTd>
+                    <MudTd DataLabel="Дата фіксації">@context.FixationDateTime</MudTd>
+                    <MudTd DataLabel="Ціна">@context.Price</MudTd>
+                </RowEditingTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[]{10, 20}"/>
+                </PagerContent>
+            </MudTable>
+
+
+            <br/>
+
+        </MudTabPanel>
+    </MudTabs>
+</MudStack>
+
+@code {
+
+    private string _searchString = "";
+    bool _fixedHeader = true;
+
+    public List<Route> RouteList = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await UpdateRoutes();
+        await UpdateUsers();
+    }
+
+    private async Task UpdateRoutes()
+    {
+        RouteList = await DbContext.Routes
+            .Include(r => r.StartStation)
+            .Include(r => r.EndStation)
+            .Include(r => r.TrainType)
+            .ToListAsync();
+    }
+
+    private async Task UpdateUsers()
+    {
+        UserList = await DbContext.Users.ToListAsync();
+    }
+
+    bool FilterFunc(Route route)
+    {
+        if (string.IsNullOrWhiteSpace(_searchString))
+            return true;
+        if (route.EndStation.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (route.StartStation.Name.Contains(_searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+        return false;
+    }
+
+    private Route _selectedRoute;
+
+    private async Task DeleteRoute(Route route)
+    {
+        bool result = (await DialogService.ShowMessageBox(
+            "Підтвердження видалення",
+            "Ви впевнені, що хочете видалити цей маршрут?",
+            yesText: "Видалити",
+            noText: "Скасувати")) ?? false;
+
+        if (result)
+        {
+            DbContext.Remove(route);
+            DbContext.Routes.Remove(route);
+            await DbContext.SaveChangesAsync();
+            await UpdateRoutes();
+            Snackbar.Add("Зміни збережено", Severity.Success);
+        }
+    }
+
+
+    private string searchString0 = "";
+    bool fixed_header0 = true;
+
+    List<User> UserList = [];
+    // protected override async Task OnInitializedAsync()
+    // {
+    //     GetUser = await DbContext.Users.ToListAsync();
+    // }
+
+    bool FilterUsers(User user)
+    {
+        if (string.IsNullOrWhiteSpace(searchString0))
+            return true;
+        if (user.FirstName.Contains(searchString0, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if (user.LastName.Contains(searchString0, StringComparison.OrdinalIgnoreCase))
+            return true;
+        if ($"{user.FirstName}".Contains(searchString0))
+            return true;
+        if ($"{user.LastName}".Contains(searchString0))
+            return true;
+        return false;
+    }
+
+    private User _selectedUser;
+
+    private async Task DeleteUser(User user)
+    {
+        bool result = (await DialogService.ShowMessageBox(
+            "Підтвердження видалення",
+            "Ви впевнені, що хочете видалити цього користувача?",
+            yesText: "Видалити",
+            noText: "Скасувати")) ?? false;
+
+        if (result)
+        {
+            DbContext.Remove(user);
+            DbContext.Users.Remove(user);
+            await DbContext.SaveChangesAsync();
+            await UpdateUsers();
+            Snackbar.Add("Зміни збережено", Severity.Success);
+        }
+    }
+
+    void l()
+    {
+        NavManager.NavigateTo("/login");
+    }
+
+    private async Task SaveRouteData()
+    {
+        DbContext.Routes.Update(_selectedRoute);
+        await DbContext.SaveChangesAsync();
+    }
+
+    private async Task RestoreRouteData()
+    {
+        _selectedRoute = await DbContext.Routes.FirstAsync(r => r.RouteId == _selectedRoute.RouteId);
+    }
+
+    private async Task SaveUserData()
+    {
+        DbContext.Users.Update(_selectedUser);
+        await DbContext.SaveChangesAsync();
+    }
+
+}

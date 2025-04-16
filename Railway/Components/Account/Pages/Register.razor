@@ -1,0 +1,166 @@
+﻿@page "/Account/Register"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Text
+@using System.Text.Encodings.Web
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.WebUtilities
+@using Railway.Data.Models
+@using Railway.Data
+
+@inject UserManager<User> UserManager
+@inject IUserStore<User> UserStore
+@inject SignInManager<User> SignInManager
+@inject IEmailSender<User> EmailSender
+@inject ILogger<Register> Logger
+@inject NavigationManager NavigationManager
+@inject IdentityRedirectManager RedirectManager
+
+<PageTitle>Реєстрація</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Реєстрація</MudText>
+
+<MudStack AlignItems="AlignItems.Center">
+    <StatusMessage Message="@Message" />
+    <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
+        <DataAnnotationsValidator />
+
+        <MudText Typo="Typo.body1" GutterBottom="true">Створіть новий акаунт.</MudText>
+
+        <MudItem md="12">
+            <MudItem md="12">
+                <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email"
+                                    Label="Email" Placeholder="name@example.com"
+                                    HelperText="user@domain.com" Variant="Variant.Outlined" Margin="Margin.Dense"
+                                    UserAttributes="@(new() { { "autocomplete", "username" }, { "aria-required", "true" } } )" />
+            </MudItem>
+            <MudItem md="12">
+                <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" Variant="Variant.Outlined"
+                                    Label="Пароль" InputType="InputType.Password" Placeholder="пароль"
+                                    UserAttributes="@(new() { { "autocomplete", "new-password" }, { "aria-required", "true" } } )" />
+            </MudItem>
+            <MudItem md="12">
+                <MudStaticTextField For="@(() => Input.ConfirmPassword)" @bind-Value="Input.ConfirmPassword" Variant="Variant.Outlined"
+                                    Label="Підтвердіть пароль" InputType="InputType.Password" Placeholder="Підтвердіть пароль"
+                                    UserAttributes="@(new() { { "autocomplete", "new-password" }, { "aria-required", "true" } } )" />
+            </MudItem>
+            <MudItem md="12">
+                <MudStaticTextField For="@(() => Input.FirstName)" @bind-Value="Input.FirstName"
+                                    Label="Ім'я" Placeholder="Пес"
+                                    Variant="Variant.Outlined" Margin="Margin.Dense"
+                                    UserAttributes="@(new() { { "autocomplete", "first-name" }, { "aria-required", "true" } } )" />
+            </MudItem>
+            <MudItem md="12">
+                <MudStaticTextField For="@(() => Input.LastName)" @bind-Value="Input.LastName"
+                                    Label="Прізвище" Placeholder="Патроненко"
+                                    Variant="Variant.Outlined" Margin="Margin.Dense"
+                                    UserAttributes="@(new() { { "autocomplete", "last-name" }, { "aria-required", "true" } } )" />
+                <MudStaticTextField For="@(() => Input.PhoneNumber)" @bind-Value="Input.PhoneNumber"
+                                    Label="Телефон" Placeholder="+380123456789"
+                                    Variant="Variant.Outlined" Margin="Margin.Dense"
+                                    UserAttributes="@(new() { { "autocomplete", "last-name" }, { "aria-required", "true" } } )" />
+            </MudItem>
+            <MudItem md="12">
+                <MudStaticButton Variant="Variant.Filled" Color="Color.Tertiary" FullWidth="true" FormAction="FormAction.Submit">Зареєструватися</MudStaticButton>
+
+                <MudStack AlignItems="AlignItems.Center">
+                    <MudLink Href="login" Color="Color.Tertiary" Underline="Underline.Always">Увійти</MudLink>
+                </MudStack>
+            </MudItem>
+        </MudItem>
+    </EditForm>
+</MudStack>
+
+@code {
+    private IEnumerable<IdentityError>? identityErrors;
+
+    [SupplyParameterFromForm]
+    private InputModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery]
+    private string? ReturnUrl { get; set; }
+
+    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+
+    public async Task RegisterUser(EditContext editContext)
+    {
+        var user = new User
+        {
+            Email = Input.Email,
+            FirstName = Input.FirstName,
+            LastName = Input.LastName,
+            PhoneNumber = Input.PhoneNumber,
+            Role = UserRole.User
+        };
+
+        await UserStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
+        var emailStore = GetEmailStore();
+        await emailStore.SetEmailAsync(user, Input.Email, CancellationToken.None);
+        var result = await UserManager.CreateAsync(user, Input.Password);
+
+        if (!result.Succeeded)
+        {
+            identityErrors = result.Errors;
+            return;
+        }
+
+        Logger.LogInformation("User created a new account with password.");
+
+        var userId = await UserManager.GetUserIdAsync(user);
+        var code = await UserManager.GenerateEmailConfirmationTokenAsync(user);
+        code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+        var callbackUrl = NavigationManager.GetUriWithQueryParameters(
+            NavigationManager.ToAbsoluteUri("Account/ConfirmEmail").AbsoluteUri,
+            new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
+
+        await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
+
+        if (UserManager.Options.SignIn.RequireConfirmedAccount)
+        {
+            RedirectManager.RedirectTo(
+                "Account/RegisterConfirmation",
+                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+        }
+
+        await SignInManager.SignInAsync(user, isPersistent: false);
+        RedirectManager.RedirectTo(ReturnUrl);
+    }
+
+    private IUserEmailStore<User> GetEmailStore()
+    {
+        if (!UserManager.SupportsUserEmail)
+        {
+            throw new NotSupportedException("The default UI requires a user store with email support.");
+        }
+        return (IUserEmailStore<User>)UserStore;
+    }
+
+    private sealed class InputModel
+    {
+        [Required]
+        [EmailAddress]
+        [Display(Name = "Email")]
+        public string Email { get; set; } = "";
+
+        [Required]
+        [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+        [DataType(DataType.Password)]
+        [Display(Name = "Password")]
+        public string Password { get; set; } = "";
+
+        [DataType(DataType.Password)]
+        [Display(Name = "Confirm password")]
+        [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+        public string ConfirmPassword { get; set; } = "";
+
+        [Required]
+        public string FirstName { get; set; } = "";
+        
+        [Required]
+        public string LastName { get; set; } = "";
+        
+        [Required]
+        [DataType(DataType.PhoneNumber)]
+        public string PhoneNumber { get; set; } = "";
+    }
+}

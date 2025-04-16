@@ -1,0 +1,64 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager NavManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+
+<MudThemeProvider @bind-IsDarkMode="@IsDarkMode" Theme="_myCustomTheme" />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudLayout>
+    <MudAppBar Color="Color.Tertiary" Elevation="0">
+        <MudToggleIconButton @bind-Toggled="@IsDarkMode"
+                             Icon="@Icons.Material.Filled.DarkMode" Color="Color.Inherit"
+                             ToggledIcon="@Icons.Material.Filled.LightMode" ToggledColor="Color.Inherit" />
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.DirectionsRailway" Color="Color.Inherit" Edge="Edge.Start" Href="/" />
+        <MudSpacer />
+        <MudIconButton Icon="@Icons.Material.Filled.BeachAccess" Color="Color.Inherit" Edge="Edge.Start" Href="/weather" />
+        <MudIconButton Icon="@Icons.Material.Filled.ShoppingCart" Color="Color.Inherit" Edge="Edge.Start" Href="/basket" />
+        <MudIconButton Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Edge="Edge.Start" Href="/settings"/>
+        <AuthorizeView>
+            <Authorized>
+                <form action="Account/Logout" method="post">
+                    <AntiforgeryToken />
+                    <input type="hidden" name="ReturnUrl" value="@NavManager.ToBaseRelativePath(NavManager.Uri)" />
+                    <button type="submit" class="mud-nav-link mud-ripple">
+                        <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit"></MudIcon>
+                    </button>
+                </form>
+            </Authorized>
+        </AuthorizeView>
+    </MudAppBar>
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="my-16 pt-16">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+
+<div id="blazor-error-ui" data-nosnippet>
+    Сталася неочікувана помилка.
+    <a href="." class="reload">Перезавантажити</a>
+    <span class="dismiss">🗙</span>
+</div>
+
+@code {
+
+    private readonly MudTheme _myCustomTheme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = Colors.Teal.Default,
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = Colors.Teal.Default,
+        }
+    };
+
+    private bool IsDarkMode { get; set; }
+}
+
+
