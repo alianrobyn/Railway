@@ -1,28 +1,40 @@
-﻿@inherits LayoutComponentBase
+﻿@using Railway.Components.Account
+@using Railway.Data.Models
+@inherits LayoutComponentBase
 @inject NavigationManager NavManager
-@inject AuthenticationStateProvider AuthenticationStateProvider
-@inject HttpClient Http
 
-<MudThemeProvider @bind-IsDarkMode="@IsDarkMode" Theme="_myCustomTheme" />
-<MudPopoverProvider />
-<MudDialogProvider />
-<MudSnackbarProvider />
+@inject IdentityUserAccessor UserAccessor
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<MudThemeProvider @bind-IsDarkMode="@IsDarkMode" Theme="_myCustomTheme"/>
+<MudPopoverProvider/>
+<MudDialogProvider/>
+<MudSnackbarProvider/>
 <MudLayout>
     <MudAppBar Color="Color.Tertiary" Elevation="0">
         <MudToggleIconButton @bind-Toggled="@IsDarkMode"
                              Icon="@Icons.Material.Filled.DarkMode" Color="Color.Inherit"
-                             ToggledIcon="@Icons.Material.Filled.LightMode" ToggledColor="Color.Inherit" />
-        <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.DirectionsRailway" Color="Color.Inherit" Edge="Edge.Start" Href="/" />
-        <MudSpacer />
-        <MudIconButton Icon="@Icons.Material.Filled.BeachAccess" Color="Color.Inherit" Edge="Edge.Start" Href="/weather" />
-        <MudIconButton Icon="@Icons.Material.Filled.ShoppingCart" Color="Color.Inherit" Edge="Edge.Start" Href="/basket" />
-        <MudIconButton Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" Edge="Edge.Start" Href="/settings"/>
+                             ToggledIcon="@Icons.Material.Filled.LightMode" ToggledColor="Color.Inherit"/>
+        <MudSpacer/>
+        <MudIconButton Icon="@Icons.Material.Filled.DirectionsRailway" Color="Color.Inherit" Edge="Edge.Start"
+                       Href="/"/>
+        <MudSpacer/>
+        <MudIconButton Icon="@Icons.Material.Filled.BeachAccess" Color="Color.Inherit" Edge="Edge.Start"
+                       Href="/weather"/>
+
+        @if (User.Role == UserRole.User)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.ShoppingCart" Color="Color.Inherit" Edge="Edge.Start"
+                           Href="/shoppingCart"/>
+        }
+        <MudIconButton
+            Icon="@(User?.Role == UserRole.User ? Icons.Material.Filled.Person : Icons.Material.Filled.Construction)"
+            Color="Color.Inherit" Edge="Edge.Start" Href="/settings"/>
         <AuthorizeView>
             <Authorized>
                 <form action="Account/Logout" method="post">
-                    <AntiforgeryToken />
-                    <input type="hidden" name="ReturnUrl" value="@NavManager.ToBaseRelativePath(NavManager.Uri)" />
+                    <AntiforgeryToken/>
+                    <input type="hidden" name="ReturnUrl" value="@NavManager.ToBaseRelativePath(NavManager.Uri)"/>
                     <button type="submit" class="mud-nav-link mud-ripple">
                         <MudIcon Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit"></MudIcon>
                     </button>
@@ -50,15 +62,29 @@
     {
         PaletteLight = new PaletteLight
         {
-            Primary = Colors.Teal.Default,
+            Primary = Colors.Teal.Default
         },
         PaletteDark = new PaletteDark
         {
-            Primary = Colors.Teal.Default,
+            Primary = Colors.Teal.Default
         }
     };
 
     private bool IsDarkMode { get; set; }
+
+
+    private User? User { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var identity = authenticationState.User.Identity;
+        if (identity is not null)
+        {
+            User = UserAccessor.GetRequiredUser(identity);
+        }
+    }
+
 }
 
 

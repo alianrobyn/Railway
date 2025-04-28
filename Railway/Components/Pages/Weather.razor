@@ -1,68 +1,85 @@
 ﻿@page "/weather"
+@using Railway.Data
+@using Railway.Data.Models
 @using Railway.Services
+@inject AppDbContext DbContext
 @inject WeatherForecastService ForecastService
 @inject IDialogService DialogService
 
-<PageTitle>Weather Forecast</PageTitle>
+<PageTitle>Прогноз Погоди</PageTitle>
+<br />
 
 <MudContainer MaxWidth="MaxWidth.Large" Style="text-align: center; margin-top: 20px;">
-<MudText Typo="Typo.h3" GutterBottom="true" Color="Color.Tertiary" Align="Align.Center">Прогноз погоди</MudText>
-<br />
+    <MudText Typo="Typo.h3" GutterBottom="true" Color="Color.Tertiary" Align="Align.Center">Прогноз погоди</MudText>
+    <br/>
 
-<div style="display: flex; justify-content: center; align-items: center;">
-<MudGrid Style="max-width: 400px;">
-    <MudTextField @bind-Value="City" Placeholder="Введіть місто" Style=""/>
-    <MudButton OnClick="GetWeather" Color="Color.Tertiary" Variant="Variant.Filled">Пошук</MudButton>
-</MudGrid>
+    <div style="display: flex; justify-content: center; align-items: center;">
+        <MudGrid Style="max-width: 400px;">
+            <MudAutocomplete T="Station" Value="City" Placeholder="Введіть місто"
+                             Strict="false" SearchFunc="(s, token) => GetStations(s, token)"
+                             ValueChanged="StationAutocompleteValueChangedCallback"/>
+            <MudButton OnClick="GetWeather" Color="Color.Tertiary" Variant="Variant.Filled">Пошук</MudButton>
+        </MudGrid>
     </div>
 
-<br />
-<br />
+    <br/>
+    <br/>
 
-@foreach (var group in ForecastList.GroupBy(f => f.dt_txt.Split(' ')[0]))
-{
-    <br />
-    <MudText Typo="Typo.h5" GutterBottom="true">
-        @DateTime.Parse(group.Key).ToString("dd.MM.yyyy")
-    </MudText>
+    @foreach (var group in ForecastList.GroupBy(f => f.dt_txt.Split(' ')[0]))
+    {
+        <br/>
+        <MudText Typo="Typo.h5" GutterBottom="true">
+            @DateTime.Parse(group.Key).ToString("dd.MM.yyyy")
+        </MudText>
 
-    <MudGrid Justify="Justify.Center" GutterSize="3">
-        @foreach (var forecast in group.Take(8))
-        {
-            <MudItem xs="12" sm="6" md="3" lg="1">
-                <MudCard Style="height: 150px;">
-                    <MudCardContent>
-                        <MudText Typo="Typo.subtitle2">
-                            @DateTime.Parse(forecast.dt_txt).ToString("HH:mm")
-                        </MudText>
-                        <img src="https://openweathermap.org/img/wn/@(forecast.weather[0].icon).png" alt="icon" />
-                        <MudText>@Math.Round(forecast.main.temp) °C</MudText>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-        }
-    </MudGrid>
-    @*<MudDivider />*@
-}
+        <MudGrid Justify="Justify.Center" GutterSize="3">
+            @foreach (var forecast in group.Take(8))
+            {
+                <MudItem xs="12" sm="6" md="3" lg="1">
+                    <MudCard Style="height: 150px;">
+                        <MudCardContent>
+                            <MudText Typo="Typo.subtitle2">
+                                @DateTime.Parse(forecast.dt_txt).ToString("HH:mm")
+                            </MudText>
+                            <img src="https://openweathermap.org/img/wn/@(forecast.weather[0].icon).png" alt="icon"/>
+                            <MudText>@Math.Round(forecast.main.temp) °C</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+        @*<MudDivider />*@
+    }
 </MudContainer>
 
-<br />
+<br/>
 
 <MudStack AlignItems="AlignItems.Center">
-    <MudLink Href="https://openweathermap.org/" Color="Color.Tertiary" Target="_blank" Underline="Underline.Always">Створено за допомогою OpenWeather</MudLink>
+    <MudLink Href="https://openweathermap.org/" Color="Color.Tertiary" Target="_blank" Underline="Underline.Always">
+        Створено за допомогою OpenWeather
+    </MudLink>
 </MudStack>
 
 
 
 @code {
-    private string City { get; set; } = "Kyiv";
+    private Station City { get; set; } = null!;
     private List<ForecastItem> ForecastList { get; set; } = [];
+    private List<Station> AllStations => _allStations ??= DbContext.Stations.ToList();
+
+    private List<Station>? _allStations;
+
+    protected override void OnInitialized()
+    {
+        City = AllStations.First();
+    }
 
     private async Task GetWeather()
     {
         try
         {
-            var forecastResponse = await ForecastService.GetWeather(City);
+            if (string.IsNullOrWhiteSpace(City.TransliteratedName)) return;
+            var forecastResponse = await ForecastService.GetWeather(City.TransliteratedName);
             if (forecastResponse is not null)
             {
                 ForecastList = forecastResponse.list;
@@ -75,4 +92,21 @@
                 "Місто не знайдено. Будь ласка, перевірте правильність написання.");
         }
     }
+
+    private Task<IEnumerable<Station>>? GetStations(string? s, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(s))
+            return Task.FromResult<IEnumerable<Station>>(AllStations);
+
+        return Task.FromResult(AllStations
+            .Where(x => x.TransliteratedName.Contains(s, StringComparison.OrdinalIgnoreCase)
+                        || x.Name.Contains(s, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    private async Task StationAutocompleteValueChangedCallback(Station station)
+    {
+        City = station;
+        await GetWeather();
+    }
+
 }

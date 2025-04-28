@@ -1,5 +1,8 @@
 ﻿@page "/payment"
+@using Railway.Services
 @inject NavigationManager NavManager
+@inject CartService CartService
+@inject ISnackbar Snackbar
 
 <PageTitle>Payment</PageTitle>
 
@@ -16,12 +19,14 @@
     <MudItem xs="7">
         <MudPaper Class="mx-auto pa-6">
             <MudStack Spacing="4">
-                <MudTextField T="string" Label="Нормер карти" Mask="@(new PatternMask("0000 0000 0000 0000"))" />
+                <MudTextField T="string" Label="Нормер карти" Mask="@(new PatternMask("0000 0000 0000 0000"))"/>
                 <MudStack Row="true">
-                    <MudTextField T="string" Label="ММ / YY" Mask="@(new DateMask("MM/YY", 'Y', 'M'))" />
-                    <MudTextField T="string" Label="CVV" Mask="@(new PatternMask("000"))" />
+                    <MudTextField T="string" Label="ММ / YY" Mask="@(new DateMask("MM/YY", 'Y'))"/>
+                    <MudTextField T="string" Label="CVV" Mask="@(new PatternMask("000"))"/>
                 </MudStack>
-                <MudButton Variant="Variant.Filled" Color="Color.Tertiary" OnClick="u" DisableElevation="true">Сплатити</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Tertiary" OnClick="ProcessPayment"
+                           DisableElevation="true">Сплатити
+                </MudButton>
             </MudStack>
         </MudPaper>
     </MudItem>
@@ -29,14 +34,55 @@
 
 @code {
 
-    private List<BreadcrumbItem> _items = new List<BreadcrumbItem>
+    private readonly List<BreadcrumbItem> _items = new()
     {
-        new BreadcrumbItem("← До корзини", href: "basket"),
+        new BreadcrumbItem("← До корзини", "shoppingCart")
     };
 
-    void u()
+    private bool IsProcessing { get; set; }
+
+    private async Task ProcessPayment()
     {
-        NavManager.NavigateTo("/success");
+        if (IsProcessing)
+            return;
+
+        IsProcessing = true;
+
+        try
+        {
+            var userId = await CartService.GetCurrentUserIdAsync();
+
+            if (userId <= 0)
+            {
+                Snackbar.Add("Будь ласка, увійдіть в систему для оплати квитків", Severity.Warning);
+                return;
+            }
+
+            // Process payment (placeholder for actual payment processing)
+            var success = await CartService.ProcessPaymentAsync(userId);
+
+            if (success)
+            {
+                Snackbar.Add("Оплата успішно проведена!", Severity.Success);
+
+                // Get most recently purchased ticket to highlight after navigation
+                var user = await CartService.GetCurrentUserAsync();
+                // Navigate to user's tickets page
+                NavManager.NavigateTo(user != null ? "/settings?tab=tickets&highlightLatest=true" : "/success");
+            }
+            else
+            {
+                Snackbar.Add("Помилка обробки оплати. Спробуйте ще раз.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Помилка: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsProcessing = false;
+        }
     }
-   
+
 }

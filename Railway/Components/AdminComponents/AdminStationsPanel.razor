@@ -1,0 +1,137 @@
+@using Microsoft.EntityFrameworkCore
+@using Railway.Components.AdminComponents.Dialogs
+@using Railway.Data
+@using Railway.Data.Models
+@using Railway.Services
+@inject AppDbContext DbContext
+@inject TransliterationService TransliterationService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudStack Row="true">
+    <MudTextField @bind-Value="SearchString" Placeholder="Пошук" Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                  Class="mt-0" TextChanged="GetStations"/>
+    <MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="NewStation" Color="Color.Tertiary">Нова станція
+    </MudButton>
+</MudStack>
+<MudTable FixedHeader="true" Items="Stations"
+          Hover="true" Elevation="0" @bind-SelectedItem="_selectedStation" CanCancelEdit="true"
+          RowEditCommit="station => _ = SaveStationData(station as Station)"
+          RowEditPreview="station => BackupStationEntity(station as Station)"
+          RowEditCancel="station => RestoreStationEntity(station as Station)">
+    <HeaderContent>
+        <MudTh>Назва станції</MudTh>
+        <MudTh>Транслітерація</MudTh>
+        <MudTh>Дії</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Назва станції">@context.Name</MudTd>
+        <MudTd DataLabel="Транслітерація">@context.TransliteratedName</MudTd>
+        <MudTd DataLabel="Дії">
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Inherit"
+                           OnClick="() => DeleteStation(context)"></MudIconButton>
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText>На Ваш запит не було знайдено жодної станції.</MudText>
+        <MudText>Переконайтеся, що всі слова написані правильно.</MudText>
+    </NoRecordsContent>
+    <LoadingContent>
+        <MudText>Завантаження...</MudText>
+    </LoadingContent>
+    <RowEditingTemplate>
+        <MudTd DataLabel="Назва станції">
+            <MudTextField @bind-Value="@context.Name" Required/>
+        </MudTd>
+        <MudTd DataLabel="Транслітерація">
+            <MudTextField @bind-Value="@context.TransliteratedName" Required/>
+        </MudTd>
+        <MudTd DataLabel="Транслітерація">
+            <MudIconButton Icon="@Icons.Material.Filled.Translate"
+                           OnClick="@(() => context.TransliteratedName = TransliterationService.Transliterate(context.Name))"/>
+        </MudTd>
+    </RowEditingTemplate>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new[]{10, 20}"/>
+    </PagerContent>
+</MudTable>
+
+@code {
+    private Station? _selectedStation;
+    private Station? _selectedStationBackup;
+    public string SearchString { get; private set; } = "";
+    public IEnumerable<Station> Stations { get; set; } = null!;
+
+    private async Task NewStation()
+    {
+        var dialog = await (await DialogService.ShowAsync<CreateStationDialog>("Нова станція")).Result;
+        if (dialog?.Canceled ?? true) return;
+
+        var newStation = (Station?)dialog.Data;
+        if (newStation == null) return;
+
+        DbContext.Stations.Add(newStation);
+        await DbContext.SaveChangesAsync();
+
+        GetStations();
+        _selectedStation = newStation;
+        Snackbar.Add("Станцію додано", Severity.Success);
+    }
+
+    private async Task SaveStationData(Station? station)
+    {
+        if (station is null) return;
+        DbContext.Stations.Update(station);
+        await DbContext.SaveChangesAsync();
+        _selectedStationBackup = null;
+        Snackbar.Add("Зміни збережено", Severity.Success);
+    }
+
+    private async Task DeleteStation(Station? station)
+    {
+        if (station is null) return;
+
+        var result = await DialogService.ShowMessageBox(
+            "Підтвердження видалення",
+            "Ви впевнені, що хочете видалити цю станцію?",
+            "Видалити",
+            "Скасувати") ?? false;
+
+        if (result)
+        {
+            DbContext.Stations.Remove(station);
+            await DbContext.SaveChangesAsync();
+            GetStations();
+            Snackbar.Add("Станцію видалено", Severity.Success);
+        }
+    }
+
+    private void GetStations()
+    {
+        var baseQuery = DbContext.Stations;
+        if (string.IsNullOrWhiteSpace(SearchString)) Stations = baseQuery;
+        else
+            Stations = baseQuery.Where(s => EF.Functions.Like(s.Name, $"%{SearchString}%")
+                                            || EF.Functions.Like(s.TransliteratedName, $"%{SearchString}%"));
+    }
+
+    private void BackupStationEntity(Station? selectedStation)
+    {
+        if (selectedStation == null) return;
+        _selectedStationBackup = new Station
+        {
+            Name = selectedStation.Name,
+            TransliteratedName = selectedStation.TransliteratedName
+        };
+    }
+
+    private void RestoreStationEntity(Station? selectedStation)
+    {
+        if (selectedStation == null || _selectedStationBackup == null) return;
+        selectedStation.Name = _selectedStationBackup.Name;
+        selectedStation.TransliteratedName = _selectedStationBackup.TransliteratedName;
+        _selectedStationBackup = null;
+    }
+
+}

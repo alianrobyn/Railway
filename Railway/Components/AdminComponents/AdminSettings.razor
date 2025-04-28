@@ -1,0 +1,33 @@
+﻿<PageTitle>Системні налаштування</PageTitle>
+
+<MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Особистий кабінет адміністратора</MudText>
+<br/><br/>
+<MudStack AlignItems="AlignItems.Center">
+    <MudTabs Rounded="true" Outlined="true" Color="Color.Tertiary" Centered>
+        <MudTabPanel Text="Користувачі">
+            <br/>
+            <AdminUsersPanel/>
+            <br/>
+        </MudTabPanel>
+        <MudTabPanel Text="Рейси">
+            <br/>
+            <AdminRoutesPanel/>
+            <br/>
+        </MudTabPanel>
+        <MudTabPanel Text="Станції">
+            <br/>
+            <AdminStationsPanel/>
+            <br/>
+        </MudTabPanel>
+        <MudTabPanel Text="Типи потягів">
+            <br/>
+            <AdminTrainTypesPanel/>
+            <br/>
+        </MudTabPanel>
+        <MudTabPanel Text="Типи квитків">
+            <br/>
+            <AdminTicketTypesPanel/>
+            <br/>
+        </MudTabPanel>
+    </MudTabs>
+</MudStack>

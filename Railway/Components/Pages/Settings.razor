@@ -1,12 +1,11 @@
 @page "/settings"
 @using Microsoft.AspNetCore.Authorization
 @using Railway.Components.Account
-@using Railway.Data
+@using Railway.Components.AdminComponents
 @using Railway.Data.Models
 
 @inject IdentityUserAccessor UserAccessor
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject AppDbContext Db
 
 @attribute [Authorize]
 
@@ -14,7 +13,7 @@
 <AuthorizeView>
     @if (User.Role == UserRole.Admin)
     {
-        <AdminSettings />
+        <AdminSettings/>
     }
     else
     {
@@ -23,9 +22,9 @@
 </AuthorizeView>
 
 @code {
-    
+
     private User User { get; set; } = null!;
-    
+
     protected override async Task OnInitializedAsync()
     {
         var authenticationState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
@@ -35,4 +34,5 @@
             User = UserAccessor.GetRequiredUser(identity);
         }
     }
+
 }

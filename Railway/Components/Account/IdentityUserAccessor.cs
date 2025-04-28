@@ -11,6 +11,7 @@ internal sealed class IdentityUserAccessor(AppDbContext dbContext)
     {
         return await dbContext.Users.FirstOrDefaultAsync(u => u.Email == identity.Name) ?? new User();
     }
+
     public User GetRequiredUser(IIdentity identity)
     {
         return dbContext.Users.FirstOrDefault(u => u.Email == identity.Name) ?? new User();

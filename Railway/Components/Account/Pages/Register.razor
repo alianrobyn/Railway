@@ -1,12 +1,10 @@
 ﻿@page "/Account/Register"
-
 @using System.ComponentModel.DataAnnotations
 @using System.Text
 @using System.Text.Encodings.Web
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using Railway.Data.Models
-@using Railway.Data
 
 @inject UserManager<User> UserManager
 @inject IUserStore<User> UserStore
@@ -18,52 +16,58 @@
 
 <PageTitle>Реєстрація</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Реєстрація</MudText>
+<MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4" GutterBottom="true">Реєстрація</MudText>
 
 <MudStack AlignItems="AlignItems.Center">
-    <StatusMessage Message="@Message" />
-    <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser" FormName="register">
-        <DataAnnotationsValidator />
+    <StatusMessage Message="@Message"/>
+    <EditForm Model="Input" asp-route-returnUrl="@ReturnUrl" method="post" OnValidSubmit="RegisterUser"
+              FormName="register">
+        <DataAnnotationsValidator/>
 
-        <MudText Typo="Typo.body1" GutterBottom="true">Створіть новий акаунт.</MudText>
+        <MudText Typo="Typo.body1" Align="Align.Center" Color="Color.Tertiary" GutterBottom="true">Створіть новий акаунт</MudText>
 
         <MudItem md="12">
             <MudItem md="12">
                 <MudStaticTextField For="@(() => Input.Email)" @bind-Value="Input.Email"
                                     Label="Email" Placeholder="name@example.com"
                                     HelperText="user@domain.com" Variant="Variant.Outlined" Margin="Margin.Dense"
-                                    UserAttributes="@(new() { { "autocomplete", "username" }, { "aria-required", "true" } } )" />
+                                    UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "username" }, { "aria-required", "true" } })"/>
             </MudItem>
             <MudItem md="12">
-                <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password" Variant="Variant.Outlined"
+                <MudStaticTextField For="@(() => Input.Password)" @bind-Value="Input.Password"
+                                    Variant="Variant.Outlined"
                                     Label="Пароль" InputType="InputType.Password" Placeholder="пароль"
-                                    UserAttributes="@(new() { { "autocomplete", "new-password" }, { "aria-required", "true" } } )" />
+                                    UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "new-password" }, { "aria-required", "true" } })"/>
             </MudItem>
             <MudItem md="12">
-                <MudStaticTextField For="@(() => Input.ConfirmPassword)" @bind-Value="Input.ConfirmPassword" Variant="Variant.Outlined"
-                                    Label="Підтвердіть пароль" InputType="InputType.Password" Placeholder="Підтвердіть пароль"
-                                    UserAttributes="@(new() { { "autocomplete", "new-password" }, { "aria-required", "true" } } )" />
+                <MudStaticTextField For="@(() => Input.ConfirmPassword)" @bind-Value="Input.ConfirmPassword"
+                                    Variant="Variant.Outlined"
+                                    Label="Підтвердіть пароль" InputType="InputType.Password"
+                                    Placeholder="Підтвердіть пароль"
+                                    UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "new-password" }, { "aria-required", "true" } })"/>
             </MudItem>
             <MudItem md="12">
                 <MudStaticTextField For="@(() => Input.FirstName)" @bind-Value="Input.FirstName"
                                     Label="Ім'я" Placeholder="Пес"
                                     Variant="Variant.Outlined" Margin="Margin.Dense"
-                                    UserAttributes="@(new() { { "autocomplete", "first-name" }, { "aria-required", "true" } } )" />
+                                    UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "first-name" }, { "aria-required", "true" } })"/>
             </MudItem>
             <MudItem md="12">
                 <MudStaticTextField For="@(() => Input.LastName)" @bind-Value="Input.LastName"
                                     Label="Прізвище" Placeholder="Патроненко"
                                     Variant="Variant.Outlined" Margin="Margin.Dense"
-                                    UserAttributes="@(new() { { "autocomplete", "last-name" }, { "aria-required", "true" } } )" />
+                                    UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "last-name" }, { "aria-required", "true" } })"/>
                 <MudStaticTextField For="@(() => Input.PhoneNumber)" @bind-Value="Input.PhoneNumber"
                                     Label="Телефон" Placeholder="+380123456789"
                                     Variant="Variant.Outlined" Margin="Margin.Dense"
-                                    UserAttributes="@(new() { { "autocomplete", "last-name" }, { "aria-required", "true" } } )" />
+                                    UserAttributes="@(new Dictionary<string, object?> { { "autocomplete", "last-name" }, { "aria-required", "true" } })"/>
             </MudItem>
             <MudItem md="12">
-                <MudStaticButton Variant="Variant.Filled" Color="Color.Tertiary" FullWidth="true" FormAction="FormAction.Submit">Зареєструватися</MudStaticButton>
-
+                <MudStaticButton Variant="Variant.Filled" Color="Color.Tertiary" FullWidth="true"
+                                 FormAction="FormAction.Submit">Зареєструватися
+                </MudStaticButton>
                 <MudStack AlignItems="AlignItems.Center">
+                    <br />
                     <MudLink Href="login" Color="Color.Tertiary" Underline="Underline.Always">Увійти</MudLink>
                 </MudStack>
             </MudItem>
@@ -72,15 +76,13 @@
 </MudStack>
 
 @code {
-    private IEnumerable<IdentityError>? identityErrors;
+    private IEnumerable<IdentityError>? _identityErrors;
 
-    [SupplyParameterFromForm]
-    private InputModel Input { get; set; } = new();
+    [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
 
-    [SupplyParameterFromQuery]
-    private string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
 
-    private string? Message => identityErrors is null ? null : $"Error: {string.Join(", ", identityErrors.Select(error => error.Description))}";
+    private string? Message => _identityErrors is null ? null : $"Error: {string.Join(", ", _identityErrors.Select(error => error.Description))}";
 
     public async Task RegisterUser(EditContext editContext)
     {
@@ -100,7 +102,7 @@
 
         if (!result.Succeeded)
         {
-            identityErrors = result.Errors;
+            _identityErrors = result.Errors;
             return;
         }
 
@@ -119,10 +121,10 @@
         {
             RedirectManager.RedirectTo(
                 "Account/RegisterConfirmation",
-                new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
+                new Dictionary<string, object?> { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
         }
 
-        await SignInManager.SignInAsync(user, isPersistent: false);
+        await SignInManager.SignInAsync(user, false);
         RedirectManager.RedirectTo(ReturnUrl);
     }
 
@@ -132,6 +134,7 @@
         {
             throw new NotSupportedException("The default UI requires a user store with email support.");
         }
+
         return (IUserEmailStore<User>)UserStore;
     }
 
@@ -153,14 +156,13 @@
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = "";
 
-        [Required]
-        public string FirstName { get; set; } = "";
-        
-        [Required]
-        public string LastName { get; set; } = "";
-        
+        [Required] public string FirstName { get; set; } = "";
+
+        [Required] public string LastName { get; set; } = "";
+
         [Required]
         [DataType(DataType.PhoneNumber)]
         public string PhoneNumber { get; set; } = "";
     }
+
 }

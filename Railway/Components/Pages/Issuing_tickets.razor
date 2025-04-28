@@ -1,7 +1,16 @@
-﻿@page "/issuing_tickets"
+﻿@page "/issuing_tickets/{RouteId:int}"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.EntityFrameworkCore
+@using Railway.Data
+@using Railway.Data.Models
+@using Railway.Services
 @inject NavigationManager NavManager
+@inject CartService CartService
+@inject AppDbContext DbContext
+@inject ISnackbar Snackbar
+@attribute [Authorize]
 
-<PageTitle>Issuing_tickets</PageTitle>
+<PageTitle>Оформлення квитків</PageTitle>
 
 <MudBreadcrumbs Items="_items">
     <ItemTemplate Context="item">
@@ -11,69 +20,207 @@
 
 <MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Оформлення квитків</MudText>
 
+@if (SelectedRoute != null)
+{
+    <MudPaper Class="pa-4 my-4" Elevation="0">
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.h6">
+                    Маршрут: @SelectedRoute.StartStation.Name → @SelectedRoute.EndStation.Name</MudText>
+                <MudText Typo="Typo.body1">
+                    Відправлення: @SelectedRoute.DepartureDateTime.ToString("dd.MM.yyyy HH:mm")</MudText>
+                <MudText Typo="Typo.body1">
+                    Прибуття: @SelectedRoute.ArrivalDateTime.ToString("dd.MM.yyyy HH:mm")</MudText>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudText Typo="Typo.body1">Тип потяга: @SelectedRoute.TrainType.Name</MudText>
+                <MudText Typo="Typo.body1">Вільних місць: @SelectedRoute.AvailableSeats</MudText>
+                <MudText Typo="Typo.body1">Базова ціна: @SelectedRoute.Price грн</MudText>
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+}
 
-
-
-
-<br />
-<br />
+<br/>
+<br/>
 
 <MudText Color="Color.Dark" Typo="Typo.h5">Введіть дані пасажирів</MudText>
 
 <MudStack Row="true">
-    <MudTextField @bind-Value="@element.Surname" Label="Прізвище" Variant="Variant.Outlined" Margin="Margin.Dense" />
-    <MudTextField @bind-Value="@element.Name" Label="Ім'я" Variant="Variant.Outlined" Margin="Margin.Dense" />
+    <MudTextField @bind-Value="@_element.Surname" Label="Прізвище" Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Required="true"/>
+    <MudTextField @bind-Value="@_element.Name" Label="Ім'я" Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Required="true"/>
 </MudStack>
 
-<br />
+<br/>
 
 <MudStack Row="true">
-    <MudText Color="Color.Dark">Тип документу:</MudText>
-    <MudSpacer />
+    <MudText Color="Color.Dark">Тип квитка:</MudText>
+    <MudSpacer/>
 </MudStack>
 <MudStack Row="true">
-    <MudRadioGroup @bind-SelectedOption="@SelectedOption" T="string">
-        <MudRadio T="string" Option="@("Radio 1")" Color="Color.Tertiary">Повний</MudRadio><br />
-        <MudRadio T="string" Option="@("Radio 4")" Color="Color.Tertiary">Пільговий</MudRadio><br />
+    <MudRadioGroup @bind-Value="@SelectedTicketType" T="TicketType">
+        @foreach (var ticketType in TicketTypes)
+        {
+            <MudRadio T="TicketType" Value="@ticketType" Color="Color.Tertiary">
+                @ticketType.Name (@GetDiscountText(ticketType))
+            </MudRadio>
+            <br/>
+        }
     </MudRadioGroup>
-
 </MudStack>
 
-<br />
+<br/>
 
-<MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="b" Color="Color.Tertiary">В кошик</MudButton>
+<MudButton Variant="Variant.Filled"
+           DisableElevation="true"
+           OnClick="AddToCart"
+           Color="Color.Tertiary"
+           Disabled="@(string.IsNullOrWhiteSpace(_element.Name) || string.IsNullOrWhiteSpace(_element.Surname))">
+    В кошик
+</MudButton>
 
-@* <MudMessageBox @ref="mbox" Title="Попередження" CancelText="Скасувати">
+<MudMessageBox @ref="Mbox" Title="Попередження" CancelText="Скасувати">
     <MessageContent>
-        В потязі перевірятиметься посвідчення, що доказує, що ви є студентом/пільговиком/дитиною. Якщо його не буде або воно виявиться неправдивим, з вас буде знято штраф.
+        В потязі перевірятиметься посвідчення, що доказує, що ви є студентом/пільговиком/дитиною. Якщо його не буде або
+        воно виявиться неправдивим, з вас буде знято штраф.
     </MessageContent>
     <YesButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" OnClick="b2">Гаразд</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Tertiary" OnClick="ConfirmAddToCart">Гаразд</MudButton>
     </YesButton>
-</MudMessageBox> *@
+</MudMessageBox>
 
 @code {
- 
-    private List<BreadcrumbItem> _items = new List<BreadcrumbItem>
-    {
-        new BreadcrumbItem("← На головну", href: "#"),
-    };
 
-    MudMessageBox mbox { get; set; } = default!;
+    private readonly List<BreadcrumbItem> _items =
+    [
+        new("← На головну", "/")
+    ];
 
-    IT element = new IT { Surname = "", Name = "" };
+    MudMessageBox Mbox { get; set; } = null!;
 
-    public class IT
+    readonly It _element = new() { Surname = "", Name = "" };
+
+    public class It
     {
         public string? Surname { get; set; }
         public string? Name { get; set; }
     }
 
-    public string SelectedOption { get; set; } = default!;
+    private List<TicketType> TicketTypes { get; set; } = new();
+    private TicketType? SelectedTicketType { get; set; } // Default to first ticket type
+    private Route? SelectedRoute { get; set; }
+    private User? CurrentUser { get; set; }
+    private bool IsDiscountTicket => SelectedTicketType?.AdditionCost < 0; // Assuming ID 1 is for regular tickets
+    [Parameter] public int RouteId { get; set; }
 
-    void b()
+    protected override async Task OnInitializedAsync()
     {
-        NavManager.NavigateTo("basket");
+        CurrentUser = await CartService.GetCurrentUserAsync();
+
+        if (CurrentUser == null)
+        {
+            Snackbar.Add("Будь ласка, увійдіть в систему для додавання квитків в кошик", Severity.Warning);
+            NavManager.NavigateTo("/");
+            return;
+        }
+
+        if (CurrentUser.Role != UserRole.User)
+        {
+            Snackbar.Add("Будь ласка, увійдіть в систему Як звичайни й користувач", Severity.Warning);
+            NavManager.NavigateTo("/");
+            return;
+        }
+
+        // Load ticket types
+        TicketTypes = await DbContext.TicketTypes.ToListAsync();
+        if (TicketTypes.Any())
+        {
+            SelectedTicketType = TicketTypes.First();
+        }
+
+        SelectedRoute = await DbContext.Routes
+            .Include(r => r.StartStation)
+            .Include(r => r.EndStation)
+            .Include(r => r.TrainType)
+            .FirstOrDefaultAsync(r => r.RouteId == RouteId);
+    }
+
+    private string GetDiscountText(TicketType ticketType)
+    {
+        return ticketType.AdditionCost == 0
+            ? "повна вартість"
+            : ticketType.AdditionCost > 0
+                ? $"доплата {ticketType.AdditionCost / 100:P0}"
+                : $"знижка {ticketType.AdditionCost / 100:P0}";
+    }
+
+    private async Task AddToCart()
+    {
+        if (string.IsNullOrWhiteSpace(_element.Name) || string.IsNullOrWhiteSpace(_element.Surname))
+        {
+            Snackbar.Add("Будь ласка, заповніть інформацію про пасажира", Severity.Warning);
+            return;
+        }
+
+        if (SelectedRoute == null)
+        {
+            Snackbar.Add("Маршрут не вибрано", Severity.Error);
+            return;
+        }
+
+        // For discount tickets, show a warning message
+        if (IsDiscountTicket)
+        {
+            await Mbox.ShowAsync();
+            return;
+        }
+
+        await ProcessAddToCart();
+    }
+
+    private async Task ConfirmAddToCart()
+    {
+        await ProcessAddToCart();
+    }
+
+    private async Task ProcessAddToCart()
+    {
+        if (SelectedTicketType == null)
+        {
+            Snackbar.Add("Тип квитка не знайдено", Severity.Error);
+            return;
+        }
+
+        var multiplier = 1.0m + SelectedTicketType.AdditionCost / 100 + SelectedRoute?.TrainType.AdditionCost / 100 ?? 0;
+        var price = SelectedRoute!.Price * multiplier;
+
+        var cartItem = new ShoppingCartItem
+        {
+            UserId = CurrentUser?.Id ?? -1,
+            RouteId = SelectedRoute.RouteId,
+            TicketTypeId = SelectedTicketType.TicketTypeId,
+            DepartureStationId = SelectedRoute.StartStationId,
+            DepartureStationName = SelectedRoute.StartStation.Name,
+            DepartureDateTime = SelectedRoute.DepartureDateTime,
+            ArrivalStationId = SelectedRoute.EndStationId,
+            ArrivalStationName = SelectedRoute.EndStation.Name,
+            ArrivalDateTime = SelectedRoute.ArrivalDateTime,
+            FirstName = _element.Name,
+            LastName = _element.Surname,
+            Price = price
+        };
+
+        if (await CartService.AddToCartAsync(cartItem))
+        {
+            Snackbar.Add("Квиток додано до кошика", Severity.Success);
+            NavManager.NavigateTo("shoppingCart");
+        }
+        else
+        {
+            Snackbar.Add("Не вдалося додати квиток до кошика", Severity.Error);
+        }
     }
 
 }

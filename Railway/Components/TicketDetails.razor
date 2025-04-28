@@ -1,0 +1,125 @@
+@using Railway.Data.Models
+@using Railway.Services
+@inject QrCodeService QrCodeService
+@inject PdfService PdfService
+@inject IJSRuntime JsRuntime
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.ConfirmationNumber" Class="mr-2"/>
+            Деталі квитка №@Ticket.TicketId
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4" Elevation="0">
+                    <MudList Clickable="false" T="string">
+                        <MudListItem>
+                            <MudText Typo="Typo.subtitle1">
+                                <strong>Маршрут:</strong> @($"{Ticket.Route?.StartStation.Name} → {Ticket.Route?.EndStation.Name}")
+                            </MudText>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudText Typo="Typo.body1"><strong>Станція
+                                    відправлення:</strong> @Ticket.DepartureStationName</MudText>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudText Typo="Typo.body1"><strong>Дата і час
+                                    відправлення:</strong> @Ticket.DepartureDateTime.ToString("dd.MM.yyyy HH:mm")
+                            </MudText>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudText Typo="Typo.body1"><strong>Станція прибуття:</strong> @Ticket.ArrivalStationName
+                            </MudText>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudText Typo="Typo.body1"><strong>Дата і час
+                                    прибуття:</strong> @Ticket.ArrivalDateTime.ToString("dd.MM.yyyy HH:mm")</MudText>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudText Typo="Typo.body1">
+                                <strong>Пасажир:</strong> @($"{Ticket.FirstName} {Ticket.LastName}")</MudText>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudText Typo="Typo.body1"><strong>Тип квитка:</strong> @Ticket.TicketType?.Name</MudText>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudText Typo="Typo.body1"><strong>Ціна:</strong> @Ticket.TicketPrice.ToString("C2")
+                            </MudText>
+                        </MudListItem>
+                        <MudListItem>
+                            <MudText Typo="Typo.body1">
+                                <strong>Статус:</strong>
+                                <MudChip Color="@GetStatusColor(Ticket.TicketStatus)" Size="Size.Small" Label="true">
+                                    @GetStatusName(Ticket.TicketStatus)
+                                </MudChip>
+                            </MudText>
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="12" md="6" Class="d-flex flex-column align-center">
+                <MudImage Src="@($"data:image/png;base64,{QrCodeService.GetQrCodeAsBase64(Ticket)}")"
+                          Width="200" Height="200" Class="ma-4" ObjectFit="ObjectFit.Contain"/>
+                <MudText Typo="Typo.caption" Class="mb-4">QR-код для перевірки квитка</MudText>
+                <MudButton OnClick="DownloadPdf" Variant="Variant.Filled"
+                           StartIcon="@Icons.Material.Filled.PictureAsPdf"
+                           Color="Color.Tertiary" Class="mt-2">
+                    Завантажити PDF
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Color="Color.Default">Закрити</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public Ticket Ticket { get; set; } = null!;
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task DownloadPdf()
+    {
+        var pdfBytes = PdfService.GenerateTicketPdf(Ticket);
+        var fileName = $"ticket_{Ticket.TicketId}.pdf";
+
+        // Use JSRuntime to trigger a file download
+        await JsRuntime.InvokeVoidAsync("downloadFileFromStream", Convert.ToBase64String(pdfBytes), "application/pdf", fileName);
+    }
+
+    private Color GetStatusColor(TicketStatus status)
+    {
+        return status switch
+        {
+            TicketStatus.Unpaid => Color.Warning,
+            TicketStatus.Planned => Color.Primary,
+            TicketStatus.Active => Color.Success,
+            TicketStatus.Used => Color.Dark,
+            TicketStatus.Cancelled => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    private string GetStatusName(TicketStatus status)
+    {
+        return status switch
+        {
+            TicketStatus.Unpaid => "Не сплачено",
+            TicketStatus.Planned => "Заплановано",
+            TicketStatus.Active => "Активний",
+            TicketStatus.Used => "Використано",
+            TicketStatus.Cancelled => "Скасовано",
+            _ => "Невідомо"
+        };
+    }
+
+}

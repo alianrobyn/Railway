@@ -1,0 +1,148 @@
+@using Microsoft.EntityFrameworkCore
+@using Railway.Components.AdminComponents.Dialogs
+@using Railway.Data
+@using Railway.Data.Models
+@inject AppDbContext DbContext
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudStack Row="true">
+    <MudTextField @bind-Value="_searchString" Placeholder="Пошук" Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                  Class="mt-0" TextChanged="GetTrainTypes"/>
+    <MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="@NewTrainType" Color="Color.Tertiary">Новий тип
+        потяга
+    </MudButton>
+</MudStack>
+<MudTable FixedHeader="true" Items="_trainTypeList" CanCancelEdit="true" Hover="true" Elevation="0"
+          @bind-SelectedItem="_selectedTrainType"
+          RowEditPreview="trainType => BackupTrainTypeEntity(trainType as TrainType)"
+          RowEditCommit="trainType => _ = SaveTrainTypeData(trainType as TrainType)"
+          RowEditCancel="trainType => RestoreTrainTypeData(trainType as TrainType)">
+    <HeaderContent>
+        <MudTh>Назва</MudTh>
+        <MudTh>Додаткова вартість</MudTh>
+        <MudTh>Дії</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Назва">@context.Name</MudTd>
+        <MudTd DataLabel="Додаткова вартість">@context.AdditionCost</MudTd>
+        <MudTd DataLabel="Дії">
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Inherit"
+                           OnClick="() => DeleteTrainType(context)"></MudIconButton>
+        </MudTd>
+    </RowTemplate>
+    <RowEditingTemplate>
+        <MudTd DataLabel="Назва">
+            <MudTextField @bind-Value="@context.Name" Required/>
+        </MudTd>
+        <MudTd DataLabel="Додаткова вартість">
+            <MudNumericField @bind-Value="@context.AdditionCost" Label="Додаткова вартість" Required Min="0"
+                             Format="F2"/>
+        </MudTd>
+        <MudTd></MudTd>
+    </RowEditingTemplate>
+    <NoRecordsContent>
+        <MudText>На Ваш запит не було знайдено жодного типу потяга.</MudText>
+        <MudText>Переконайтеся, що всі слова написані правильно.</MudText>
+    </NoRecordsContent>
+    <LoadingContent>
+        <MudText>Завантаження...</MudText>
+    </LoadingContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new[]{10, 20}"/>
+    </PagerContent>
+</MudTable>
+
+@code {
+
+    private IEnumerable<TrainType> _trainTypeList = [];
+
+    private string _searchString = "";
+    private TrainType? _selectedTrainType;
+    private TrainType? _selectedTrainTypeBackup;
+
+    protected override Task OnInitializedAsync()
+    {
+        GetTrainTypes();
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteTrainType(TrainType? trainType)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Підтвердження видалення",
+            "Ви впевнені, що хочете видалити цей тип потяга?",
+            "Видалити",
+            "Скасувати") ?? false;
+
+        if (result)
+        {
+            DbContext.TrainTypes.Remove(trainType);
+            await DbContext.SaveChangesAsync();
+            GetTrainTypes();
+            Snackbar.Add("Тип потяга видалено", Severity.Success);
+        }
+    }
+
+    private async Task SaveTrainTypeData(TrainType? trainType)
+    {
+        if (trainType == null) return;
+        DbContext.TrainTypes.Update(trainType);
+        await DbContext.SaveChangesAsync();
+        _selectedTrainTypeBackup = null;
+        Snackbar.Add("Зміни збережено", Severity.Success);
+    }
+
+    private void BackupTrainTypeEntity(TrainType? trainType)
+    {
+        if (trainType == null) return;
+        _selectedTrainTypeBackup = new TrainType
+        {
+            TrainTypeId = trainType.TrainTypeId,
+            Name = trainType.Name,
+            AdditionCost = trainType.AdditionCost
+        };
+    }
+
+    private void RestoreTrainTypeData(TrainType? trainType)
+    {
+        if (trainType == null || _selectedTrainTypeBackup == null) return;
+        trainType.Name = _selectedTrainTypeBackup.Name;
+        trainType.AdditionCost = _selectedTrainTypeBackup.AdditionCost;
+        _selectedTrainTypeBackup = null;
+    }
+
+    private void GetTrainTypes()
+    {
+        var baseQuery = DbContext.TrainTypes;
+        if (!string.IsNullOrWhiteSpace(_searchString))
+        {
+            _trainTypeList = baseQuery.Where(t => EF.Functions.Like(t.Name, $"%{_searchString}%"))
+                .ToList();
+        }
+        else
+        {
+            _trainTypeList = baseQuery.ToList();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task NewTrainType()
+    {
+        var dialog = await (await DialogService.ShowAsync<CreateTrainTypeDialog>("Новий тип потяга")).Result;
+        if (dialog?.Canceled ?? true) return;
+
+        var newTrainType = (TrainType?)dialog.Data;
+        if (newTrainType == null) return;
+
+        DbContext.TrainTypes.Add(newTrainType);
+        await DbContext.SaveChangesAsync();
+
+        GetTrainTypes();
+        _selectedTrainType = newTrainType;
+        Snackbar.Add("Тип потяга додано", Severity.Success);
+    }
+
+}

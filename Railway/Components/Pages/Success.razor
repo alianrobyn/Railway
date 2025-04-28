@@ -1,19 +1,35 @@
-﻿@page "/success"
+@page "/success"
+@using Railway.Services
 @inject NavigationManager NavManager
+@inject CartService CartService
 
+<PageTitle>Успішна оплата</PageTitle>
 
-<PageTitle>Success</PageTitle>
-<MudItem Class="d-flex align-center justify-center ">
-	<MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Tertiary" Style="font-size: 4rem;" />
-</MudItem>
+<MudContainer MaxWidth="MaxWidth.Medium" Class="d-flex flex-column align-center mt-16">
+    <MudItem Class="d-flex align-center justify-center ">
+        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Tertiary" Style="font-size: 4rem;"/>
+    </MudItem>
+    <MudPaper Elevation="3" Class="pa-10 d-flex flex-column align-center">
+        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" Class="mb-4"/>
+        <MudText Typo="Typo.h4" Align="Align.Center" Class="mb-4">Оплата успішно проведена!</MudText>
+        <MudText Typo="Typo.body1" Align="Align.Center" Class="mb-6">
+            Ваші квитки успішно оплачені. Ви можете переглянути їх в особистому кабінеті.
+        </MudText>
 
-<br />
+        <MudButton Variant="Variant.Filled" Color="Color.Tertiary"
+                   OnClick="@(() => NavManager.NavigateTo("/settings?tab=tickets&highlightLatest=true"))"
+                   Size="Size.Large" Class="mt-4">
+            Перейти до квитків
+        </MudButton>
 
-<MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Оплата пройшла успішно!</MudText>
+        <MudButton Variant="Variant.Text" Color="Color.Default"
+                   OnClick="@(() => NavManager.NavigateTo("/"))"
+                   Size="Size.Small" Class="mt-6">
+            Повернутися на головну
+        </MudButton>
+    </MudPaper>
+</MudContainer>
 
-<br />
-<br />
-
-<MudItem Class="d-flex align-center justify-center ">
-	<MudLink Href="ticket" Color="Color.Tertiary" Underline="Underline.Always">Перегляд документів</MudLink>
-</MudItem>
+@code {
+    // Success page after payment
+}

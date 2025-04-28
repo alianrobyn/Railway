@@ -1,7 +1,7 @@
 ﻿@page "/"
 @using Microsoft.EntityFrameworkCore
-@using Railway.Data;
-@using Railway.Data.Models;
+@using Railway.Data
+@using Railway.Data.Models
 @inject NavigationManager NavManager
 @inject AppDbContext DbContext
 
@@ -9,41 +9,42 @@
 <PageTitle>Index</PageTitle>
 
 <MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Головна</MudText>
-<br />
-<br />
+<br/>
+<br/>
 
 <MudStack Row="true">
-    <MudTextField @bind-Value="@element.From" Label="Звідки"  Variant="Variant.Outlined" Margin="Margin.Dense" />
-    <MudIconButton Icon="@Icons.Material.Filled.SyncAlt" Color="Color.Inherit" Edge="Edge.Start" OnClick="SwapValues" />
-    <MudTextField @bind-Value="@element.Where" Label="Куди" Variant="Variant.Outlined" Margin="Margin.Dense" />
+    <MudTextField @bind-Value="@_element.From" Label="Звідки" Variant="Variant.Outlined" Margin="Margin.Dense"/>
+    <MudIconButton Icon="@Icons.Material.Filled.SyncAlt" Color="Color.Inherit" Edge="Edge.Start" OnClick="SwapValues"/>
+    <MudTextField @bind-Value="@_element.Where" Label="Куди" Variant="Variant.Outlined" Margin="Margin.Dense"/>
 </MudStack>
-<br />
+<br/>
 @*<MudItem xs="3">
 	<MudTextField @bind-Value="@element.Data" Format="yyyy-MM-dd" Label="Дата відправлення" Variant="Variant.Outlined" Margin="Margin.Dense" InputType="InputType.Date" />
 </MudItem>*@
-<br />
+<br/>
 
 <div class="d-flex align-end justify-space-between mud-width-full">
-	<div class="d-flex flex-column">
-        <MudText><b>Звідки:</b> @element.From</MudText>
-        <MudText><b>Куди:</b> @element.Where</MudText>
-@*		<MudText><b>Дата відправлення:</b> @element.Data.ToShortDateString()</MudText>
-*@	</div>
+    <div class="d-flex flex-column">
+        <MudText><b>Звідки:</b> @_element.From</MudText>
+        <MudText><b>Куди:</b> @_element.Where</MudText>
+        @*		<MudText><b>Дата відправлення:</b> @element.Data.ToShortDateString()</MudText>
+*@    </div>
 </div>
 
-<br />
-<MudTable FixedHeader="@fixed_header" Filter="new Func<Route,bool>(FilterRoutes)" Items="GetRoute" Hover="true" Elevation="0">
+<br/>
+<MudTable FixedHeader="@_fixedHeader" Filter="new Func<Route,bool>(FilterRoutes)" Items="_getRoute" Hover="true"
+          Elevation="0">
     <HeaderContent>
         <MudTh>№ потяга</MudTh>
         <MudTh>Відправлення</MudTh>
-        <MudTh> </MudTh>
+        <MudTh></MudTh>
         <MudTh>Прибуття</MudTh>
-        <MudTh> </MudTh>
+        <MudTh></MudTh>
         <MudTh>Тип потяга</MudTh>
         <MudTh>Вільних місць</MudTh>
         <MudTh>Дата фіксації</MudTh>
         <MudTh>Ціна</MudTh>
-        <MudTh> </MudTh>
+        <MudTh></MudTh>
     </HeaderContent>
     <RowTemplate>
         <MudTd DataLabel="№ потяга">@context.RouteId</MudTd>
@@ -56,23 +57,26 @@
         <MudTd DataLabel="Дата фіксації">@context.FixationDateTime</MudTd>
         <MudTd DataLabel="Ціна">@context.Price</MudTd>
         <MudTd DataLabel="Дії">
-            <MudIconButton Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Small" Color="Color.Inherit" OnClick="GoToIssuingTickets" />
+            <MudIconButton Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Small" Color="Color.Inherit"
+                           OnClick="@(() => GoToIssuingTickets(context.RouteId))"/>
         </MudTd>
     </RowTemplate>
     <NoRecordsContent>
         <MudText>На Ваш запит не було знайдено жодного маршруту.</MudText>
         <MudText>Переконайтеся, що всі слова написані правильно.</MudText>
-        <MudText>Якщо помилок не було виявлено - по заданому Вами напрямку місць немає, але ви можете переглянути маршрути з пересадкою.</MudText>
+        <MudText>Якщо помилок не було виявлено - по заданому Вами напрямку місць немає, але ви можете переглянути
+            маршрути з пересадкою.
+        </MudText>
     </NoRecordsContent>
     <LoadingContent>
         <MudText>Завантаження...</MudText>
     </LoadingContent>
     <PagerContent>
-        <MudTablePager PageSizeOptions="new int[]{10, 20}" />
+        <MudTablePager PageSizeOptions="new[]{10, 20}"/>
     </PagerContent>
 </MudTable>
 
-<br />
+<br/>
 
 <MudStack AlignItems="AlignItems.Center">
     <MudStack Row="true">
@@ -84,23 +88,28 @@
 
 
 @code {
-    private void SwapValues() => (element.From, element.Where) = (element.Where, element.From);
+    private void SwapValues()
+    {
+        (_element.From, _element.Where) = (_element.Where, _element.From);
+    }
 
-    Search element = new() { From = "", Where = "", /*Data = DateTime.Today */};
+    readonly Search _element = new() { From = "", Where = "" /*Data = DateTime.Today */ };
 
     public class Search
     {
         public string? From { get; set; }
+
         public string? Where { get; set; }
         //public DateTime Data { get; set; }
     }
 
-    bool fixed_header = true;
+    readonly bool _fixedHeader = true;
 
-    List<Route> GetRoute = [];
+    List<Route> _getRoute = [];
+
     protected override void OnInitialized()
     {
-        GetRoute = DbContext.Routes
+        _getRoute = DbContext.Routes
             .Include(r => r.StartStation)
             .Include(r => r.EndStation)
             .Include(r => r.TrainType)
@@ -109,33 +118,33 @@
 
     bool FilterRoutes(Route route)
     {
-        if (element == null || route == null)
+        if (_element == null || route == null)
         {
             return false; // Handle null cases
         }
 
-        if (string.IsNullOrWhiteSpace(element.From) && string.IsNullOrWhiteSpace(element.Where))
+        if (string.IsNullOrWhiteSpace(_element.From) && string.IsNullOrWhiteSpace(_element.Where))
         {
             return true; // Return true if both filters are empty.
         }
 
-        if (string.IsNullOrWhiteSpace(element.From) && !string.IsNullOrWhiteSpace(element.Where))
+        if (string.IsNullOrWhiteSpace(_element.From) && !string.IsNullOrWhiteSpace(_element.Where))
         {
-            return route.EndStation.Name.Contains(element.Where, StringComparison.OrdinalIgnoreCase);
+            return route.EndStation.Name.Contains(_element.Where, StringComparison.OrdinalIgnoreCase);
         }
 
-        if (string.IsNullOrWhiteSpace(element.Where) && !string.IsNullOrWhiteSpace(element.From))
+        if (string.IsNullOrWhiteSpace(_element.Where) && !string.IsNullOrWhiteSpace(_element.From))
         {
-            return route.StartStation.Name.Contains(element.From, StringComparison.OrdinalIgnoreCase);
+            return route.StartStation.Name.Contains(_element.From, StringComparison.OrdinalIgnoreCase);
         }
 
-        return route.StartStation.Name.Contains(element.From, StringComparison.OrdinalIgnoreCase) &&
-               route.EndStation.Name.Contains(element.Where, StringComparison.OrdinalIgnoreCase);
-
+        return route.StartStation.Name.Contains(_element.From, StringComparison.OrdinalIgnoreCase) &&
+               route.EndStation.Name.Contains(_element.Where, StringComparison.OrdinalIgnoreCase);
     }
 
-    void GoToIssuingTickets()
+    void GoToIssuingTickets(int routeId)
     {
-        NavManager.NavigateTo("issuing_tickets");
+        NavManager.NavigateTo($"issuing_tickets/{routeId}");
     }
+
 }

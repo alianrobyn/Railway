@@ -1,18 +1,17 @@
-﻿@using Railway.Data
+﻿@using Microsoft.AspNetCore.WebUtilities
+@using Railway.Data
 @using Railway.Data.Models
 @inject IDialogService DialogService
 @inject AppDbContext Db
+@inject NavigationManager NavManager
 
 <PageTitle>Особистий кабінет</PageTitle>
 <MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Особистий кабінет</MudText>
-<br/>
-<br/>
+<br/><br/>
 <MudStack AlignItems="AlignItems.Center">
-    <MudTabs Rounded="true" Outlined="true" Color="Color.Tertiary" Centered>
+    <MudTabs @bind-ActivePanelIndex="_activeTabIndex" Rounded="true" Outlined="true" Color="Color.Tertiary" Centered>
         <MudTabPanel Text="Особисті дані">
-
             <br/><br/>
-
             <MudStack AlignItems="AlignItems.Center">
                 <MudItem xs="10">
                     <MudTextField @bind-Value="@User.LastName" Label="Прізвище" Variant="Variant.Outlined"
@@ -22,31 +21,74 @@
                     <MudTextField @bind-Value="@User.PhoneNumber" Label="Телефон" Variant="Variant.Outlined"
                                   Margin="Margin.Dense"/>
                 </MudItem>
-
-
                 <MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="Save" Color="Color.Tertiary">
                     Зберегти
                 </MudButton>
-
             </MudStack>
         </MudTabPanel>
         <MudTabPanel Text="Мої квитки">
-
-
+            <br/><br/>
+            <UserTickets User="@User" HighlightTicketId="@HighlightTicketId"/>
         </MudTabPanel>
     </MudTabs>
 </MudStack>
 
 @code {
+    [Parameter] public User User { get; set; } = null!;
 
-    [Parameter] 
-    public User User { get; set; } = null!;
-    
+    private int _activeTabIndex;
+    private int? HighlightTicketId { get; set; }
+
+    protected override void OnInitialized()
+    {
+        var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+
+        // Check query parameters
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("tab", out var tabValue))
+        {
+            if (tabValue == "tickets")
+            {
+                _activeTabIndex = 1; // Switch to tickets tab
+            }
+        }
+
+        // Check if we should highlight the latest ticket
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("highlightLatest", out var highlightValue)
+            && highlightValue == "true")
+        {
+            // Will be set to latest ticket ID when data is loaded
+            GetLatestTicketId();
+        }
+
+        // Check if specific ticket ID should be highlighted
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("ticketId", out var ticketIdValue)
+            && int.TryParse(ticketIdValue, out var ticketId))
+        {
+            HighlightTicketId = ticketId;
+            _activeTabIndex = 1; // Switch to tickets tab
+        }
+    }
+
+    private void GetLatestTicketId()
+    {
+        // Find the latest ticket for this user
+        var latestTicket = Db.Tickets
+            .Where(t => t.UserId == User.Id)
+            .OrderByDescending(t => t.TicketId)
+            .FirstOrDefault();
+            
+        if (latestTicket != null)
+        {
+            HighlightTicketId = latestTicket.TicketId;
+            StateHasChanged();
+        }
+    }
+
     private async Task Save()
     {
-        var confirm = await DialogService.ShowMessageBox("Зберегти зміни?", 
-            "Зберегти зміни, внесені в особисті дані?", 
-            "Зберегти", 
+        var confirm = await DialogService.ShowMessageBox("Зберегти зміни?",
+            "Зберегти зміни, внесені в особисті дані?",
+            "Зберегти",
             "Не зберігати");
         if (!confirm.HasValue || !confirm.Value) return;
         Db.Users.Update(User);

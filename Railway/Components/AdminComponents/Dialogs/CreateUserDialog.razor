@@ -1,0 +1,49 @@
+@using Microsoft.AspNetCore.Identity
+@using Railway.Data.Models
+@inject IUserStore<User> UserStore
+@inject UserManager<User> UserManager
+
+<MudDialog>
+    <DialogContent>
+        <MudStack>
+            <MudTextField @bind-Value="@_user.LastName" Label="Прізвище" Required/>
+            <MudTextField @bind-Value="@_user.FirstName" Label="Ім'я" Required/>
+            <MudTextField @bind-Value="@_user.PhoneNumber" Label="Телефон" Required/>
+            <MudTextField @bind-Value="@_user.Email" Label="Email" Required/>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Скасувати</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Створити</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private readonly User _user = new();
+
+    private async Task Submit()
+    {
+        await UserStore.SetUserNameAsync(_user, _user.Email, CancellationToken.None);
+        var emailStore = (IUserEmailStore<User>)UserStore;
+        await emailStore.SetEmailAsync(_user, _user.Email, CancellationToken.None);
+        var result = await UserManager.CreateAsync(_user, "PleaseChangeYourPassword1#");
+
+        if (result.Succeeded)
+        {
+            MudDialog.Close(DialogResult.Ok(_user));
+        }
+        else
+        {
+            // Handle errors
+            MudDialog.Close(DialogResult.Cancel());
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Close(DialogResult.Cancel());
+    }
+
+}

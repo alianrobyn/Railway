@@ -1,26 +1,163 @@
-﻿@page "/basket"
+﻿@page "/shoppingCart"
+@using Microsoft.AspNetCore.Authorization
+@using Railway.Data.Models
+@using Railway.Services
 @inject NavigationManager NavManager
+@inject CartService CartService
+@inject ISnackbar Snackbar
+@attribute [Authorize]
 
-<PageTitle>Basket</PageTitle>
-
-<MudBreadcrumbs Items="_items">
-    <ItemTemplate Context="item">
-        <MudLink Color="Color.Tertiary" Href="@item.Href">@item.Text.ToUpper()</MudLink>
-    </ItemTemplate>
-</MudBreadcrumbs>
-
-<PageTitle>Basket</PageTitle>
+<PageTitle>Кошик</PageTitle>
 
 <MudText Align="Align.Center" Color="Color.Tertiary" Typo="Typo.h4">Кошик</MudText>
 
-<MudLink Href="payment" Color="Color.Tertiary" Underline="Underline.Always">Замовити</MudLink>
+<br />
+
+@if (IsLoading)
+{
+    <MudProgressCircular Color="Color.Tertiary" Indeterminate="true"/>
+}
+else if (CartItems.Count == 0)
+{
+    <MudPaper Class="pa-4 my-4">
+        <MudText Typo="Typo.body1" Align="Align.Center">Ваш кошик порожній</MudText>
+        <MudText Typo="Typo.body2" Align="Align.Center">Додайте квитки для оформлення замовлення</MudText>
+        <div class="d-flex justify-center mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Tertiary" Href="/">Шукати квитки</MudButton>
+        </div>
+    </MudPaper>
+}
+else
+{
+    <MudTable Items="@CartItems" Dense="true" Hover="true" Bordered="false" Striped="true">
+        <HeaderContent>
+            <MudTh>Маршрут</MudTh>
+            <MudTh>Дата відправлення</MudTh>
+            <MudTh>Дата прибуття</MudTh>
+            <MudTh>Пасажир</MudTh>
+            <MudTh>Тип квитка</MudTh>
+            <MudTh>Ціна</MudTh>
+            <MudTh>Дії</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Маршрут">@context.DepartureStationName → @context.ArrivalStationName</MudTd>
+            <MudTd DataLabel="Дата відправлення">@context.DepartureDateTime.ToString("dd.MM.yyyy HH:mm")</MudTd>
+            <MudTd DataLabel="Дата прибуття">@context.ArrivalDateTime.ToString("dd.MM.yyyy HH:mm")</MudTd>
+            <MudTd DataLabel="Пасажир">@context.LastName @context.FirstName</MudTd>
+            <MudTd DataLabel="Тип квитка">@(context.TicketType?.Name ?? "Стандартний")</MudTd>
+            <MudTd DataLabel="Ціна">@context.Price.ToString("N2") грн</MudTd>
+            <MudTd DataLabel="Дії">
+                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                               Size="Size.Small"
+                               Color="Color.Error"
+                               OnClick="@(() => RemoveFromCart(context.ShoppingCartItemId))"/>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+
+    <MudDivider Class="my-6"/>
+
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudPaper Class="pa-4" Elevation="0">
+                <MudText Typo="Typo.h6">Загальна сума: @TotalPrice.ToString("N2") грн</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" md="6" Class="d-flex justify-end">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Error"
+                       StartIcon="@Icons.Material.Filled.DeleteSweep"
+                       OnClick="ClearCart"
+                       Class="mr-2">
+                Очистити кошик
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Tertiary"
+                       StartIcon="@Icons.Material.Filled.Payment"
+                       OnClick="Checkout">
+                Оформити замовлення
+            </MudButton>
+        </MudItem>
+    </MudGrid>
+}
 
 @code {
-   
-    private List<BreadcrumbItem> _items = new List<BreadcrumbItem>
-    {
-        new BreadcrumbItem("← До оформлення квитків", href: "issuing_tickets"),
-    };
+    private List<ShoppingCartItem> CartItems { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private decimal TotalPrice => CartItems.Sum(i => i.Price);
+    private int UserId { get; set; }
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCartItems();
+    }
+
+    private async Task LoadCartItems()
+    {
+        IsLoading = true;
+
+        try
+        {
+            UserId = await CartService.GetCurrentUserIdAsync();
+
+            if (UserId > 0)
+            {
+                CartItems = await CartService.GetCartItemsAsync(UserId);
+            }
+            else
+            {
+                CartItems = new List<ShoppingCartItem>();
+                Snackbar.Add("Будь ласка, увійдіть в систему для доступу до кошику", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Помилка завантаження кошика: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task RemoveFromCart(int cartItemId)
+    {
+        if (await CartService.RemoveFromCartAsync(cartItemId, UserId))
+        {
+            await LoadCartItems();
+            Snackbar.Add("Квиток видалено з кошика", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Не вдалося видалити квиток", Severity.Error);
+        }
+    }
+
+    private async Task ClearCart()
+    {
+        if (await CartService.ClearCartAsync(UserId))
+        {
+            await LoadCartItems();
+            Snackbar.Add("Кошик очищено", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Не вдалося очистити кошик", Severity.Error);
+        }
+    }
+
+    private async Task Checkout()
+    {
+        try
+        {
+            var tickets = await CartService.CheckoutAsync(UserId);
+            Snackbar.Add($"Замовлення успішно оформлено. Створено {tickets.Count} квитків", Severity.Success);
+            NavManager.NavigateTo("payment");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Помилка при оформленні замовлення: {ex.Message}", Severity.Error);
+        }
+    }
 
 }

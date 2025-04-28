@@ -3,13 +3,17 @@ namespace Railway.Services;
 // ReSharper disable InconsistentNaming
 #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider adding the 'required' modifier or declaring as nullable.
 
-public class WeatherForecastService(HttpClient httpClient)
+public class WeatherForecastService(HttpClient httpClient, IConfiguration configuration)
 {
-    const string ApiKey = "5412f0f429a9841c48d4bdae725c0a89";
-    const string BaseUrl = "https://api.openweathermap.org/data/2.5";
+    private readonly string _apiKey = configuration["WeatherAPI:ApiKey"] ??
+                                      throw new InvalidOperationException("WeatherAPI:ApiKey is not configured");
+
+    private readonly string _baseUrl = configuration["WeatherAPI:BaseUrl"] ??
+                                       throw new InvalidOperationException("WeatherAPI:BaseUrl is not configured");
+
     public async Task<ForecastRoot?> GetWeather(string city)
     {
-        var url = $"{BaseUrl}/forecast?q={city}&lang=ua&appid={ApiKey}&units=metric";
+        var url = $"{_baseUrl}/forecast?q={city}&lang=ua&appid={_apiKey}&units=metric";
         return await httpClient.GetFromJsonAsync<ForecastRoot>(url);
     }
 }
@@ -31,7 +35,7 @@ public class ForecastItem
 {
     public List<WeatherInfo> weather { get; set; }
     public Main main { get; set; }
-    public string dt_txt { get; set; } 
+    public string dt_txt { get; set; }
 }
 
 public class ForecastRoot

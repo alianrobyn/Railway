@@ -2,6 +2,7 @@ namespace Railway.Data.Models;
 
 public enum TicketStatus
 {
+    Unpaid,
     Planned,
     Active,
     Used,
@@ -11,5 +12,5 @@ public enum TicketStatus
 public enum UserRole
 {
     User = 0,
-    Admin,
+    Admin
 }

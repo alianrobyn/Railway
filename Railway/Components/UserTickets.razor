@@ -1,0 +1,143 @@
+@using Microsoft.EntityFrameworkCore
+@using Railway.Data
+@using Railway.Data.Models
+@using Railway.Services
+@inject AppDbContext Db
+@inject IDialogService DialogService
+@inject QrCodeService QrCodeService
+@inject PdfService PdfService
+@inject IJSRuntime JsRuntime
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    @if (Tickets == null)
+    {
+        <MudProgressCircular Color="Color.Tertiary" Indeterminate="true"/>
+    }
+    else if (!Tickets.Any())
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Filled" Class="my-4">
+            У вас поки немає придбаних квитків.
+        </MudAlert>
+    }
+    else
+    {
+        <MudDataGrid Items="@Tickets" Filterable="true" SortMode="SortMode.Multiple" Breakpoint="Breakpoint.Sm"
+                     Bordered="true" Dense="true" Hover="true" Striped="true">
+            <Columns>
+                <PropertyColumn Property="@(x => $"{x.Route!.StartStation.Name} → {x.Route!.EndStation.Name}")"
+                                Title="Маршрут"/>
+                <PropertyColumn Property="x => x.DepartureStationName" Title="Станція відправлення"/>
+                <PropertyColumn Property="x => x.DepartureDateTime" Title="Дата і час відправлення"
+                                Format="dd.MM.yyyy HH:mm"/>
+                <PropertyColumn Property="x => x.ArrivalStationName" Title="Станція прибуття"/>
+                <PropertyColumn Property="x => x.ArrivalDateTime" Title="Дата і час прибуття"
+                                Format="dd.MM.yyyy HH:mm"/>
+                <PropertyColumn Property="@(x => $"{x.FirstName} {x.LastName}")" Title="Пасажир"/>
+                <PropertyColumn Property="x => x.TicketType!.Name" Title="Тип квитка"/>
+                <PropertyColumn Property="x => x.TicketPrice" Title="Ціна" Format="C2"/>
+                <TemplateColumn Title="Статус">
+                    <CellTemplate>
+                        @{
+                            var ticket = context.Item;
+                            <MudChip Color="@GetStatusColor(ticket!.TicketStatus)" Size="Size.Small" Label="true">
+                                @GetStatusName(ticket.TicketStatus)
+                            </MudChip>
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+                <TemplateColumn Title="Дії" Sortable="false">
+                    <CellTemplate>
+                        @{
+                            var ticket = context.Item;
+                            <MudStack Row="true">
+                                <MudIconButton Icon="@Icons.Material.Filled.QrCode" Color="Color.Info" Size="Size.Small"
+                                               OnClick="@(() => ShowTicketDetails(ticket!))"
+                                               Title="Показати QR-код і деталі квитка"/>
+                                <MudIconButton Icon="@Icons.Material.Filled.PictureAsPdf" Color="Color.Error"
+                                               Size="Size.Small"
+                                               OnClick="@(() => DownloadTicketPdf(ticket!))" Title="Завантажити PDF"/>
+                            </MudStack>
+                        }
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public User User { get; set; } = null!;
+
+    [Parameter] public int? HighlightTicketId { get; set; }
+
+    private List<Ticket>? Tickets { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTickets();
+
+        // If there's a highlighted ticket, show its details
+        if (HighlightTicketId.HasValue && Tickets != null)
+        {
+            var ticket = Tickets.FirstOrDefault(t => t.TicketId == HighlightTicketId.Value);
+            if (ticket != null)
+            {
+                await ShowTicketDetails(ticket);
+            }
+        }
+    }
+
+    private async Task LoadTickets()
+    {
+        Tickets = await Db.Tickets
+            .Where(t => t.UserId == User.Id)
+            .Include(t => t.Route).ThenInclude(r => r.StartStation)
+            .Include(t => t.Route).ThenInclude(r => r.EndStation)
+            .Include(t => t.TicketType)
+            .OrderByDescending(t => t.DepartureDateTime)
+            .ToListAsync();
+    }
+
+    private async Task ShowTicketDetails(Ticket ticket)
+    {
+        var parameters = new DialogParameters { ["Ticket"] = ticket };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<TicketDetails>("Квиток", parameters, options);
+    }
+
+    private async Task DownloadTicketPdf(Ticket ticket)
+    {
+        var pdfBytes = PdfService.GenerateTicketPdf(ticket);
+        var fileName = $"ticket_{ticket.TicketId}.pdf";
+
+        // Use JSRuntime to trigger a file download
+        await JsRuntime.InvokeVoidAsync("downloadFileFromStream", Convert.ToBase64String(pdfBytes), "application/pdf", fileName);
+    }
+
+    private Color GetStatusColor(TicketStatus status)
+    {
+        return status switch
+        {
+            TicketStatus.Unpaid => Color.Warning,
+            TicketStatus.Planned => Color.Primary,
+            TicketStatus.Active => Color.Success,
+            TicketStatus.Used => Color.Dark,
+            TicketStatus.Cancelled => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    private string GetStatusName(TicketStatus status)
+    {
+        return status switch
+        {
+            TicketStatus.Unpaid => "Не сплачено",
+            TicketStatus.Planned => "Заплановано",
+            TicketStatus.Active => "Активний",
+            TicketStatus.Used => "Використано",
+            TicketStatus.Cancelled => "Скасовано",
+            _ => "Невідомо"
+        };
+    }
+
+}

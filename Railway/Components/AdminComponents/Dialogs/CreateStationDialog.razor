@@ -1,0 +1,45 @@
+@using Railway.Data.Models
+@using Railway.Services
+@inject TransliterationService TransliterationService
+
+<MudDialog>
+    <DialogContent>
+        <MudStack>
+            <MudTextField T="string" Value="_station.Name" Label="Назва станції" Required
+                          Immediate="true" ValueChanged="s => StationNameValueChanged(s)"/>
+            <MudTextField @bind-Value="_station.TransliteratedName" Label="Транслітерація" Required/>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Скасувати</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Створити</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private readonly Station _station = new();
+
+    private void UpdateTransliteration(string value)
+    {
+        _station.TransliteratedName = TransliterationService.Transliterate(value);
+    }
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(_station));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Close(DialogResult.Cancel());
+    }
+
+    private void StationNameValueChanged(string newValue)
+    {
+        _station.Name = newValue;
+        UpdateTransliteration(newValue);
+    }
+
+}

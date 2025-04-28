@@ -1,0 +1,189 @@
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using Railway.Components.AdminComponents.Dialogs
+@using Railway.Data
+@using Railway.Data.Models
+@inject NavigationManager NavManager
+@inject AppDbContext DbContext
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IUserStore<User> UserStore
+@inject UserManager<User> UserManager
+
+<MudStack Row="true">
+    <MudTextField @bind-Value="_searchString" Placeholder="Пошук" Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                  Class="mt-0" TextChanged="GetUsers"/>
+    <MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="@NewUser" Color="Color.Tertiary">Новий
+        користувач
+    </MudButton>
+</MudStack>
+<MudTable T="User" FixedHeader="true" Items="UserList" Hover="true" Elevation="0" CanCancelEdit="true"
+          @bind-SelectedItem="_selectedUser" ReadOnly="false"
+          RowEditCommit="user => _ = SaveUserData(user as User)" RowEditPreview="user => BackupUserEntity(user as User)"
+          RowEditCancel="user => RestoreUserEntity(user as User)">
+    <HeaderContent>
+        <MudTh>№ користувача</MudTh>
+        <MudTh>Прізвище</MudTh>
+        <MudTh>Ім'я</MudTh>
+        <MudTh>Телефон</MudTh>
+        <MudTh>Email</MudTh>
+        <MudTh></MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="№ користувача">@context.Id</MudTd>
+        <MudTd DataLabel="Прізвище">@context.LastName</MudTd>
+        <MudTd DataLabel="Ім'я">@context.FirstName</MudTd>
+        <MudTd DataLabel="Телефон">@context.PhoneNumber</MudTd>
+        <MudTd DataLabel="Email">@context.Email</MudTd>
+        <MudTd DataLabel="Дії">
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Inherit"
+                           OnClick="() => DeleteUser(context)"></MudIconButton>
+        </MudTd>
+    </RowTemplate>
+    <RowEditingTemplate>
+        <MudTd DataLabel="№ користувача">@context.Id</MudTd>
+        <MudTd DataLabel="Прізвище">
+            <MudTextField @bind-Value="@context.LastName" Required/>
+        </MudTd>
+        <MudTd DataLabel="Ім'я">
+            <MudTextField @bind-Value="@context.FirstName" Required/>
+        </MudTd>
+        <MudTd DataLabel="Телефон">
+            <MudTextField @bind-Value="@context.PhoneNumber" Required/>
+        </MudTd>
+        <MudTd DataLabel="Email">
+            <MudTextField @bind-Value="@context.Email" Required/>
+        </MudTd>
+    </RowEditingTemplate>
+    <NoRecordsContent>
+        <MudText>На Ваш запит не було знайдено жодного користувача.</MudText>
+        <MudText>Переконайтеся, що всі слова написані правильно.</MudText>
+    </NoRecordsContent>
+    <LoadingContent>
+        <MudText>Завантаження...</MudText>
+    </LoadingContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new[] { 10, 20 }"/>
+    </PagerContent>
+</MudTable>
+
+@code {
+
+    private IEnumerable<User> UserList { get; set; } = null!;
+
+    private string _searchString = "";
+    private User? _selectedUser;
+    private User? _selectedUserBackup;
+
+    private void GetUsers()
+    {
+        var baseQuery = DbContext.Users;
+        if (!string.IsNullOrWhiteSpace(_searchString))
+        {
+            UserList = baseQuery.Where(u => EF.Functions.Like(u.FirstName, $"%{_searchString}%")
+                                            || EF.Functions.Like(u.LastName, $"%{_searchString}%")
+                                            || EF.Functions.Like(u.Email, $"%{_searchString}%"));
+        }
+        else
+        {
+            UserList = baseQuery.AsEnumerable();
+        }
+    }
+
+    private async Task DeleteUser(User user)
+    {
+        if (user.PasswordHash == null)
+        {
+            GetUsers();
+            return;
+        }
+
+        var result = await DialogService.ShowMessageBox(
+            "Підтвердження видалення",
+            "Ви впевнені, що хочете видалити цього користувача?",
+            "Видалити",
+            "Скасувати") ?? false;
+
+        if (result)
+        {
+            DbContext.Remove(user);
+            DbContext.Users.Remove(user);
+            await DbContext.SaveChangesAsync();
+            GetUsers();
+            Snackbar.Add("Зміни збережено", Severity.Success);
+        }
+    }
+
+    private async Task SaveUserData(User? selectedUser)
+    {
+        if (selectedUser == null) return;
+        if (selectedUser.PasswordHash == null)
+        {
+            await UserStore.SetUserNameAsync(selectedUser, selectedUser.Email, CancellationToken.None);
+            var emailStore = GetEmailStore();
+            await emailStore.SetEmailAsync(selectedUser, selectedUser.Email, CancellationToken.None);
+            var result = await UserManager.CreateAsync(selectedUser, "PleaseChangeYourPassword1#");
+            if (result.Succeeded)
+            {
+                selectedUser.Id = Convert.ToInt32(await UserManager.GetUserIdAsync(selectedUser));
+            }
+            else
+            {
+                await DialogService.ShowMessageBox("Помилка", string.Join("\n", result.Errors.Select(err => err.Description)));
+            }
+        }
+        else
+        {
+            DbContext.Users.Update(selectedUser);
+            await DbContext.SaveChangesAsync();
+        }
+
+        GetUsers();
+        _selectedUserBackup = null;
+    }
+
+    private void BackupUserEntity(User? selectedUser)
+    {
+        if (selectedUser == null) return;
+        _selectedUserBackup = new User
+        {
+            FirstName = selectedUser.FirstName,
+            LastName = selectedUser.LastName,
+            PhoneNumber = selectedUser.PhoneNumber,
+            Email = selectedUser.Email
+        };
+    }
+
+    private void RestoreUserEntity(User? selectedUser)
+    {
+        if (selectedUser == null || _selectedUserBackup == null) return;
+        selectedUser.FirstName = _selectedUserBackup.FirstName;
+        selectedUser.LastName = _selectedUserBackup.LastName;
+        selectedUser.PhoneNumber = _selectedUserBackup.PhoneNumber;
+        selectedUser.Email = _selectedUserBackup.Email;
+        _selectedUserBackup = null;
+    }
+
+    private IUserEmailStore<User> GetEmailStore()
+    {
+        if (!UserManager.SupportsUserEmail)
+        {
+            throw new NotSupportedException("The default UI requires a user store with email support.");
+        }
+
+        return (IUserEmailStore<User>)UserStore;
+    }
+
+    private async Task NewUser()
+    {
+        var dialog = await (await DialogService.ShowAsync<CreateUserDialog>("Новий користувач")).Result;
+        if (dialog?.Canceled ?? true) return;
+
+        var newUser = (User?)dialog.Data;
+        if (newUser == null) return;
+        GetUsers();
+        _selectedUser = newUser;
+    }
+
+}

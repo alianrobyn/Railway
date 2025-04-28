@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MudBlazor.Services;
+using QuestPDF;
+using QuestPDF.Infrastructure;
 using Railway.Components;
 using Railway.Components.Account;
 using Railway.Data;
@@ -29,7 +31,8 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
+                       throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -44,6 +47,14 @@ builder.Services.AddSingleton<IEmailSender<User>, IdentityNoOpEmailSender>();
 builder.Services.AddSingleton<HttpClient>()
     .AddSingleton<WeatherForecastService>();
 
+builder.Services
+    .AddSingleton<TransliterationService>()
+    .AddSingleton<QrCodeService>()
+    .AddSingleton<PdfService>()
+    .AddScoped<CartService>();
+
+Settings.License = LicenseType.Community;
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -53,7 +64,7 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    app.UseExceptionHandler("/Error", createScopeForErrors: true);
+    app.UseExceptionHandler("/Error", true);
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }

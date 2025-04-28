@@ -1,13 +1,12 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace Railway.Data.Models
+namespace Railway.Data.Models;
+
+public class TicketType
 {
-    public class TicketType
-    {
-        public int TicketTypeId { get; set; }
+    public int TicketTypeId { get; set; }
 
-        [MaxLength(255)] public string? Name { get; set; }
+    [MaxLength(255)] public string? Name { get; set; }
 
-        public decimal AdditionCost { get; set; }
-    }
+    public decimal AdditionCost { get; set; }
 }

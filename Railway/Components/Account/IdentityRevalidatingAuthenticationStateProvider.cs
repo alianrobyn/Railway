@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Server;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Options;
-using Railway.Data;
 using Railway.Data.Models;
 
 namespace Railway.Components.Account;
@@ -11,9 +10,9 @@ namespace Railway.Components.Account;
 // This is a server-side AuthenticationStateProvider that revalidates the security stamp for the connected user
 // every 30 minutes an interactive circuit is connected.
 internal sealed class IdentityRevalidatingAuthenticationStateProvider(
-        ILoggerFactory loggerFactory,
-        IServiceScopeFactory scopeFactory,
-        IOptions<IdentityOptions> options)
+    ILoggerFactory loggerFactory,
+    IServiceScopeFactory scopeFactory,
+    IOptions<IdentityOptions> options)
     : RevalidatingServerAuthenticationStateProvider(loggerFactory)
 {
     protected override TimeSpan RevalidationInterval => TimeSpan.FromMinutes(30);
@@ -30,19 +29,12 @@ internal sealed class IdentityRevalidatingAuthenticationStateProvider(
     private async Task<bool> ValidateSecurityStampAsync(UserManager<User> userManager, ClaimsPrincipal principal)
     {
         var user = await userManager.GetUserAsync(principal);
-        if (user is null)
-        {
-            return false;
-        }
-        else if (!userManager.SupportsUserSecurityStamp)
-        {
-            return true;
-        }
-        else
-        {
-            var principalStamp = principal.FindFirstValue(options.Value.ClaimsIdentity.SecurityStampClaimType);
-            var userStamp = await userManager.GetSecurityStampAsync(user);
-            return principalStamp == userStamp;
-        }
+        if (user is null) return false;
+
+        if (!userManager.SupportsUserSecurityStamp) return true;
+
+        var principalStamp = principal.FindFirstValue(options.Value.ClaimsIdentity.SecurityStampClaimType);
+        var userStamp = await userManager.GetSecurityStampAsync(user);
+        return principalStamp == userStamp;
     }
 }

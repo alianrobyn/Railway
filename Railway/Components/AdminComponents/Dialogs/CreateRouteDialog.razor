@@ -1,0 +1,90 @@
+@using Railway.Data
+@using Railway.Data.Models
+@inject AppDbContext DbContext
+
+<MudDialog>
+    <DialogContent>
+        <MudStack>
+            <MudSelect T="Station" @bind-Value="_departureStation" Label="Станція відправлення" Required>
+                @foreach (var station in Stations)
+                {
+                    <MudSelectItem Value="station">@station.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField T="DateTime?" Format="s" InputType="InputType.DateTimeLocal"
+                          @bind-Date="_route.DepartureDateTime" Label="Час відправлення" Required/>
+
+            <MudSelect T="Station" @bind-Value="_arrivalStation" Label="Станція прибуття" Required>
+                @foreach (var station in Stations)
+                {
+                    <MudSelectItem Value="station">@station.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudTextField T="DateTime?" Format="s" InputType="InputType.DateTimeLocal"
+                          @bind-Date="_route.ArrivalDateTime" Label="Час прибуття" Required/>
+
+            <MudSelect T="TrainType" @bind-Value="_route.TrainType" Label="Тип потяга" Required>
+                @foreach (var type in TrainTypes)
+                {
+                    <MudSelectItem Value="type">@type.Name</MudSelectItem>
+                }
+            </MudSelect>
+
+            <MudNumericField @bind-Value="_route.AvailableSeats" Label="Вільних місць" Required Min="0"/>
+            <MudNumericField @bind-Value="_route.Price" Label="Ціна" Required Min="1" Format="F2"/>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Скасувати</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" Disabled="@(!IsValid())">Створити</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private readonly Route _route = new()
+    {
+        FixationDateTime = DateTime.Now,
+        DepartureDateTime = DateTime.Now.AddHours(1),
+        ArrivalDateTime = DateTime.Now.AddHours(3),
+        AvailableSeats = 100
+    };
+
+    private Station? _departureStation;
+    private Station? _arrivalStation;
+    private IEnumerable<Station> Stations { get; set; } = [];
+    private IEnumerable<TrainType> TrainTypes { get; set; } = [];
+
+    protected override void OnInitialized()
+    {
+        Stations = DbContext.Stations.ToList();
+        TrainTypes = DbContext.TrainTypes.ToList();
+        _route.TrainType = TrainTypes.First();
+    }
+
+    private bool IsValid()
+    {
+        return _departureStation != null &&
+               _arrivalStation != null &&
+               _route.DepartureDateTime < _route.ArrivalDateTime &&
+               _route.AvailableSeats >= 0 &&
+               _route.Price > 0;
+    }
+
+    private void Submit()
+    {
+        if (_departureStation == null || _arrivalStation == null) return;
+        _route.StartStationId = _departureStation.StationId;
+        _route.EndStationId = _arrivalStation.StationId;
+        MudDialog.Close(DialogResult.Ok(_route));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Close(DialogResult.Cancel());
+    }
+
+}

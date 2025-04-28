@@ -1,16 +1,17 @@
 ﻿@using Railway.Components.Account.Shared
+@using Railway.Components.Layout
 <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
-        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)">
+        <AuthorizeRouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)">
             <NotAuthorized>
-                <RedirectToLogin />
+                <RedirectToLogin/>
             </NotAuthorized>
         </AuthorizeRouteView>
-        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+        <FocusOnNavigate RouteData="routeData" Selector="h1"/>
     </Found>
     <NotFound>
         <PageTitle>Не знайдено</PageTitle>
-        <LayoutView Layout="@typeof(Layout.MainLayout)">
+        <LayoutView Layout="@typeof(MainLayout)">
             <p role="alert">Перепрошуємо, але за цією адресою нічого немає.</p>
         </LayoutView>
     </NotFound>

@@ -1,0 +1,31 @@
+@using Railway.Data.Models
+<MudDialog>
+    <DialogContent>
+        <MudStack>
+            <MudTextField @bind-Value="@_trainType.Name" Label="Назва" Required/>
+            <MudNumericField @bind-Value="@_trainType.AdditionCost" Label="Додаткова вартість" Required Min="0"
+                             Format="F2"/>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Скасувати</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">Створити</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    private readonly TrainType _trainType = new();
+
+    private void Submit()
+    {
+        MudDialog.Close(DialogResult.Ok(_trainType));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Close(DialogResult.Cancel());
+    }
+
+}

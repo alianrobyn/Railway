@@ -1,0 +1,147 @@
+@using Microsoft.EntityFrameworkCore
+@using Railway.Components.AdminComponents.Dialogs
+@using Railway.Data
+@using Railway.Data.Models
+@inject AppDbContext DbContext
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudStack Row="true">
+    <MudTextField @bind-Value="_searchString" Placeholder="Пошук" Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium"
+                  Class="mt-0" TextChanged="GetTicketTypes"/>
+    <MudButton Variant="Variant.Filled" DisableElevation="true" OnClick="@NewTicketType" Color="Color.Tertiary">Новий
+        тип квитка
+    </MudButton>
+</MudStack>
+<MudTable FixedHeader="true" Items="_ticketTypeList" CanCancelEdit="true" Hover="true" Elevation="0"
+          @bind-SelectedItem="_selectedTicketType"
+          RowEditPreview="ticketType => BackupTicketTypeEntity(ticketType as TicketType)"
+          RowEditCommit="ticketType => _ = SaveTicketTypeData(ticketType as TicketType)"
+          RowEditCancel="ticketType => RestoreTicketTypeData(ticketType as TicketType)">
+    <HeaderContent>
+        <MudTh>Назва</MudTh>
+        <MudTh>Додаткова вартість</MudTh>
+        <MudTh>Дії</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Назва">@context.Name</MudTd>
+        <MudTd DataLabel="Додаткова вартість">@context.AdditionCost</MudTd>
+        <MudTd DataLabel="Дії">
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Inherit"
+                           OnClick="() => DeleteTicketType(context)"></MudIconButton>
+        </MudTd>
+    </RowTemplate>
+    <RowEditingTemplate>
+        <MudTd DataLabel="Назва">
+            <MudTextField @bind-Value="@context.Name" Required/>
+        </MudTd>
+        <MudTd DataLabel="Додаткова вартість">
+            <MudNumericField @bind-Value="@context.AdditionCost" Label="Додаткова вартість" Required Format="F2"/>
+        </MudTd>
+        <MudTd></MudTd>
+    </RowEditingTemplate>
+    <NoRecordsContent>
+        <MudText>На Ваш запит не було знайдено жодного типу квитка.</MudText>
+        <MudText>Переконайтеся, що всі слова написані правильно.</MudText>
+    </NoRecordsContent>
+    <LoadingContent>
+        <MudText>Завантаження...</MudText>
+    </LoadingContent>
+    <PagerContent>
+        <MudTablePager PageSizeOptions="new[]{10, 20}"/>
+    </PagerContent>
+</MudTable>
+
+@code {
+
+    private IEnumerable<TicketType> _ticketTypeList = [];
+
+    private string _searchString = "";
+    private TicketType? _selectedTicketType;
+    private TicketType? _selectedTicketTypeBackup;
+
+    protected override Task OnInitializedAsync()
+    {
+        GetTicketTypes();
+        return Task.CompletedTask;
+    }
+
+    private async Task DeleteTicketType(TicketType? ticketType)
+    {
+        var result = await DialogService.ShowMessageBox(
+            "Підтвердження видалення",
+            "Ви впевнені, що хочете видалити цей тип квитка?",
+            "Видалити",
+            "Скасувати") ?? false;
+
+        if (result)
+        {
+            DbContext.TicketTypes.Remove(ticketType);
+            await DbContext.SaveChangesAsync();
+            GetTicketTypes();
+            Snackbar.Add("Тип квитка видалено", Severity.Success);
+        }
+    }
+
+    private async Task SaveTicketTypeData(TicketType? ticketType)
+    {
+        if (ticketType == null) return;
+        DbContext.TicketTypes.Update(ticketType);
+        await DbContext.SaveChangesAsync();
+        _selectedTicketTypeBackup = null;
+        Snackbar.Add("Зміни збережено", Severity.Success);
+    }
+
+    private void BackupTicketTypeEntity(TicketType? ticketType)
+    {
+        if (ticketType == null) return;
+        _selectedTicketTypeBackup = new TicketType
+        {
+            TicketTypeId = ticketType.TicketTypeId,
+            Name = ticketType.Name,
+            AdditionCost = ticketType.AdditionCost
+        };
+    }
+
+    private void RestoreTicketTypeData(TicketType? ticketType)
+    {
+        if (ticketType == null || _selectedTicketTypeBackup == null) return;
+        ticketType.Name = _selectedTicketTypeBackup.Name;
+        ticketType.AdditionCost = _selectedTicketTypeBackup.AdditionCost;
+        _selectedTicketTypeBackup = null;
+    }
+
+    private void GetTicketTypes()
+    {
+        var baseQuery = DbContext.TicketTypes;
+        if (!string.IsNullOrWhiteSpace(_searchString))
+        {
+            _ticketTypeList = baseQuery.Where(t => EF.Functions.Like(t.Name, $"%{_searchString}%"))
+                .ToList();
+        }
+        else
+        {
+            _ticketTypeList = baseQuery.ToList();
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task NewTicketType()
+    {
+        var dialog = await (await DialogService.ShowAsync<CreateTicketTypeDialog>("Новий тип квитка")).Result;
+        if (dialog?.Canceled ?? true) return;
+
+        var newTicketType = (TicketType?)dialog.Data;
+        if (newTicketType == null) return;
+
+        DbContext.TicketTypes.Add(newTicketType);
+        await DbContext.SaveChangesAsync();
+
+        GetTicketTypes();
+        _selectedTicketType = newTicketType;
+        Snackbar.Add("Тип квитка додано", Severity.Success);
+    }
+
+}
